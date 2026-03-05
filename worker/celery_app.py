@@ -31,4 +31,12 @@ app.conf.beat_schedule = {
         "task": "worker.tasks.subscription.apply_referral_bonuses",
         "schedule": 600.0,  # every 10 min
     },
+    "aggregate-analytics": {
+        "task": "worker.tasks.analytics.aggregate_analytics",
+        "schedule": 3600.0,  # every hour
+    },
+    "weekly-digest": {
+        "task": "worker.tasks.analytics.send_weekly_digest",
+        "schedule": 604800.0,  # weekly
+    },
 }
