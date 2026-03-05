@@ -1,0 +1,34 @@
+from aiogram.fsm.state import State, StatesGroup
+
+
+class OnboardingStates(StatesGroup):
+    NAME = State()           # Шаг 1: имя мастера
+    NICHE = State()          # Шаг 2: выбор ниши
+    SERVICE_NAME = State()   # Шаг 3a: название услуги
+    SERVICE_PRICE = State()  # Шаг 3b: цена
+    SERVICE_DURATION = State()  # Шаг 3c: длительность
+    SCHEDULE_DAYS = State()  # Шаг 4a: выбор рабочих дней
+    SCHEDULE_START = State() # Шаг 4b: время начала
+    SCHEDULE_END = State()   # Шаг 4c: время конца
+    SCHEDULE_STEP = State()  # Шаг 4d: шаг слотов
+    DONE = State()           # Шаг 5: готово
+
+
+class AddServiceStates(StatesGroup):
+    NAME = State()
+    PRICE = State()
+    DURATION = State()
+
+
+class EditScheduleStates(StatesGroup):
+    SELECT_DAY = State()
+    START_TIME = State()
+    END_TIME = State()
+    STEP = State()
+
+
+class ManualBookingStates(StatesGroup):
+    CLIENT_NAME = State()
+    SERVICE = State()
+    DATE = State()
+    TIME = State()
