@@ -1,5 +1,5 @@
 import pytest
-from datetime import date, time, datetime, timedelta, timezone
+from datetime import date, time, datetime, timedelta
 
 from db.models import Master, Service, ScheduleTemplate, Booking
 
@@ -15,7 +15,7 @@ async def seeded_db(db_session):
         referral_code="TESTREF",
         is_onboarded=True,
         subscription_status="trial",
-        trial_ends_at=datetime.now(timezone.utc) + timedelta(days=14),
+        trial_ends_at=datetime.utcnow() + timedelta(days=14),
     )
     db_session.add(master)
     await db_session.flush()

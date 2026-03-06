@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -18,7 +18,7 @@ async def master_in_db(db_session):
         referral_code="TRIBUTE1",
         is_onboarded=True,
         subscription_status="trial",
-        trial_ends_at=datetime.now(timezone.utc) + timedelta(days=1),
+        trial_ends_at=datetime.utcnow() + timedelta(days=1),
     )
     db_session.add(master)
     await db_session.commit()
@@ -45,7 +45,7 @@ async def test_tribute_activation(api_client, master_in_db, monkeypatch):
     # Monkeypatch the secret for testing
     monkeypatch.setattr("shared.config.settings.tribute_webhook_secret", "test_secret")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     payload = {
         "event": "subscription.activated",
         "subscriber_id": "sub_123",

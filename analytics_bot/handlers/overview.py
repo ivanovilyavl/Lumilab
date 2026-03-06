@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -13,7 +13,7 @@ router = Router()
 
 @router.message(Command("stats"))
 async def cmd_stats(message: Message, db: AsyncSession):
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_ago = now - timedelta(days=7)
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from aiogram import Router, F
 from aiogram.filters import Command
@@ -15,7 +15,7 @@ router = Router()
 def days_left(dt: datetime | None) -> int:
     if not dt:
         return 0
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     delta = dt - now
     return max(0, delta.days)
 

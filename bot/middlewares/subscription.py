@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
@@ -45,7 +45,7 @@ class SubscriptionMiddleware(BaseMiddleware):
                 return await handler(event, data)
 
         # Check subscription
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         has_access = False
 
         if master.subscription_status == "trial" and master.trial_ends_at and master.trial_ends_at > now:

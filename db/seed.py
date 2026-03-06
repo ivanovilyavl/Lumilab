@@ -1,7 +1,7 @@
 """Seed development database with test data."""
 import asyncio
 import random
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,7 +71,7 @@ async def seed():
         await conn.run_sync(Base.metadata.create_all)
 
     async with async_session() as db:
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
 
         # ── Master 1: trial ──
         m1 = Master(

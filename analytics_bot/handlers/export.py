@@ -1,6 +1,6 @@
 import csv
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from aiogram import Router
 from aiogram.filters import Command, CommandObject
@@ -43,7 +43,7 @@ async def _export_masters(message: Message, db: AsyncSession):
 
 
 async def _export_bookings(message: Message, db: AsyncSession):
-    month_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    month_ago = datetime.utcnow() - timedelta(days=30)
     result = await db.execute(
         select(Booking)
         .where(Booking.created_at >= month_ago)

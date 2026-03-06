@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -13,7 +13,7 @@ router = Router()
 
 @router.message(Command("users"))
 async def cmd_users(message: Message, db: AsyncSession):
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     month_ago = now - timedelta(days=30)
 
     # Total

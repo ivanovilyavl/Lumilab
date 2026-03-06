@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 def _get_bot():
     """Lazy import to avoid circular dependency."""
     from aiogram import Bot
+    from aiogram.client.default import DefaultBotProperties
     from aiogram.enums import ParseMode
     from shared.config import settings
-    return Bot(token=settings.bot_token, parse_mode=ParseMode.HTML)
+    return Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
 async def _find_client_tg_id(booking: Booking) -> int | None:
@@ -41,7 +42,7 @@ async def _send_reminder_24h():
     from db.session import async_session
     from bot.keyboards.common import client_cancel_kb
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     window_start = now + timedelta(hours=22)
     window_end = now + timedelta(hours=26)
 
@@ -62,7 +63,7 @@ async def _send_reminder_24h():
         sent = 0
 
         for b in bookings:
-            booking_dt = datetime.combine(b.booking_date, b.start_time, tzinfo=timezone.utc)
+            booking_dt = datetime.combine(b.booking_date, b.start_time)
             if not (window_start <= booking_dt <= window_end):
                 continue
 
@@ -92,7 +93,7 @@ async def _send_reminder_2h():
     from db.session import async_session
     from bot.keyboards.common import client_cancel_kb
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     window_start = now + timedelta(hours=1, minutes=45)
     window_end = now + timedelta(hours=2, minutes=15)
 
@@ -112,7 +113,7 @@ async def _send_reminder_2h():
         sent = 0
 
         for b in bookings:
-            booking_dt = datetime.combine(b.booking_date, b.start_time, tzinfo=timezone.utc)
+            booking_dt = datetime.combine(b.booking_date, b.start_time)
             if not (window_start <= booking_dt <= window_end):
                 continue
 
@@ -146,7 +147,7 @@ async def _auto_cancel_pending():
     from db.session import async_session
     from db.models import Event
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     async with async_session() as db:
         result = await db.execute(
@@ -162,8 +163,8 @@ async def _auto_cancel_pending():
         cancelled = 0
 
         for b in bookings:
-            booking_dt = datetime.combine(b.booking_date, b.start_time, tzinfo=timezone.utc)
-            created_at = b.created_at.replace(tzinfo=timezone.utc) if b.created_at.tzinfo is None else b.created_at
+            booking_dt = datetime.combine(b.booking_date, b.start_time)
+            created_at = b.created_at
             twelve_h_deadline = created_at + timedelta(hours=12)
             two_h_before = booking_dt - timedelta(hours=2)
 

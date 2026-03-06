@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -13,7 +13,7 @@ def _make_master(**kwargs) -> Master:
         display_name="Test",
         referral_code="TEST",
         subscription_status="trial",
-        trial_ends_at=datetime.now(timezone.utc) + timedelta(days=7),
+        trial_ends_at=datetime.utcnow() + timedelta(days=7),
         subscription_ends_at=None,
         referral_bonus_days=0,
     )
@@ -26,7 +26,7 @@ def _make_master(**kwargs) -> Master:
 
 def _has_access(master: Master) -> bool:
     """Replicate SubscriptionMiddleware logic for unit testing."""
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     if master.subscription_status == "trial" and master.trial_ends_at and master.trial_ends_at > now:
         return True
     if master.subscription_status == "active" and master.subscription_ends_at and master.subscription_ends_at > now:
@@ -37,19 +37,19 @@ def _has_access(master: Master) -> bool:
 
 
 def test_trial_active():
-    m = _make_master(subscription_status="trial", trial_ends_at=datetime.now(timezone.utc) + timedelta(days=5))
+    m = _make_master(subscription_status="trial", trial_ends_at=datetime.utcnow() + timedelta(days=5))
     assert _has_access(m) is True
 
 
 def test_trial_expired():
-    m = _make_master(subscription_status="trial", trial_ends_at=datetime.now(timezone.utc) - timedelta(days=1))
+    m = _make_master(subscription_status="trial", trial_ends_at=datetime.utcnow() - timedelta(days=1))
     assert _has_access(m) is False
 
 
 def test_active_subscription():
     m = _make_master(
         subscription_status="active",
-        subscription_ends_at=datetime.now(timezone.utc) + timedelta(days=20),
+        subscription_ends_at=datetime.utcnow() + timedelta(days=20),
     )
     assert _has_access(m) is True
 

@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy import select, and_
 
@@ -12,15 +12,16 @@ logger = logging.getLogger(__name__)
 
 def _get_bot():
     from aiogram import Bot
+    from aiogram.client.default import DefaultBotProperties
     from aiogram.enums import ParseMode
     from shared.config import settings
-    return Bot(token=settings.bot_token, parse_mode=ParseMode.HTML)
+    return Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
 async def _check_trial_expiry():
     from db.session import async_session
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     tomorrow_start = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow_end = tomorrow_start + timedelta(days=1)
 
@@ -53,7 +54,7 @@ async def _check_trial_expiry():
 async def _mark_subscription_expired():
     from db.session import async_session
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     async with async_session() as db:
         # Expired trials

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from aiogram import Router, F
 from aiogram.filters import CommandStart, CommandObject
@@ -241,7 +241,7 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
     referral_code = generate_referral_code()
 
     # Create master
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     master = Master(
         telegram_id=telegram_id,
         username=username,

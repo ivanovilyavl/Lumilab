@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select, text
 
@@ -14,7 +14,7 @@ async def _aggregate_analytics():
     """Aggregate hourly event counts for dashboard queries."""
     from db.session import async_session
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     hour_ago = now - timedelta(hours=1)
 
     async with async_session() as db:
@@ -37,7 +37,7 @@ async def _send_weekly_digest():
     if not settings.analytics_bot_token:
         return
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     week_ago = now - timedelta(days=7)
 
     async with async_session() as db:
@@ -58,7 +58,8 @@ async def _send_weekly_digest():
         f"🎁 Рефералов: +{counts.get('referral_used', 0)}",
     ]
 
-    bot = Bot(token=settings.analytics_bot_token, parse_mode=ParseMode.HTML)
+    from aiogram.client.default import DefaultBotProperties
+    bot = Bot(token=settings.analytics_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     for admin_id in settings.admin_ids:
         try:
             await bot.send_message(admin_id, "\n".join(text_lines))

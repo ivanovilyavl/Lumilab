@@ -121,10 +121,11 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
     # Notify master about new booking
     try:
         from aiogram import Bot
+        from aiogram.client.default import DefaultBotProperties
         from aiogram.enums import ParseMode
         from bot.keyboards.common import booking_notification_kb
 
-        bot = Bot(token=settings.bot_token, parse_mode=ParseMode.HTML)
+        bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
         await bot.send_message(
             master.telegram_id,
             f"📅 Новая запись!\n\n"
