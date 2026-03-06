@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, useSearchParams } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { useMaster } from './hooks/useApi';
 import MasterProfile from './pages/MasterProfile';
 import DatePicker from './pages/DatePicker';
@@ -9,15 +9,28 @@ import BookingConfirm from './pages/BookingConfirm';
 import BookingSuccess from './pages/BookingSuccess';
 import './App.css';
 
+function getStartParam(): string | null {
+  // 1. Telegram passes startapp value via WebApp API
+  const tgParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+  if (tgParam) return tgParam;
+
+  // 2. Telegram also appends tgWebAppStartParam to the URL
+  const url = new URLSearchParams(window.location.search);
+  const urlParam = url.get('tgWebAppStartParam');
+  if (urlParam) return urlParam;
+
+  // 3. Fallback: direct ?master= param (for dev/testing)
+  return url.get('master');
+}
+
 export default function App() {
-  const [params] = useSearchParams();
-  const masterUsername = params.get('master');
+  const [masterUsername, setMasterUsername] = useState<string | null>(null);
 
   const { master, loading, error } = useMaster(masterUsername);
 
   // Booking state
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [, setSelectedSlot] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
 
@@ -34,6 +47,7 @@ export default function App() {
         setClientName(name);
       }
     }
+    setMasterUsername(getStartParam());
   }, []);
 
   if (!masterUsername) {

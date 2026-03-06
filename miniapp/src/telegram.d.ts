@@ -7,6 +7,7 @@ interface TelegramWebAppUser {
 
 interface TelegramWebAppInitData {
   user?: TelegramWebAppUser;
+  start_param?: string;
 }
 
 interface TelegramWebApp {
