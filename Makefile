@@ -35,6 +35,22 @@ miniapp-dev:
 miniapp-build:
 	cd miniapp && npm ci && npm run build
 
+# PROD
+prod-up:
+	docker compose -f docker-compose.prod.yml up -d --build
+prod-down:
+	docker compose -f docker-compose.prod.yml down
+prod-logs:
+	docker compose -f docker-compose.prod.yml logs -f
+prod-logs-bot:
+	docker compose -f docker-compose.prod.yml logs -f bot
+prod-logs-analytics:
+	docker compose -f docker-compose.prod.yml logs -f analytics_bot
+prod-migrate:
+	docker compose -f docker-compose.prod.yml exec api alembic upgrade head
+prod-restart:
+	docker compose -f docker-compose.prod.yml restart bot analytics_bot api worker beat
+
 # ngrok (для Telegram в DEV)
 ngrok-api:
 	ngrok http 8000
