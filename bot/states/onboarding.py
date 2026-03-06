@@ -27,8 +27,21 @@ class EditScheduleStates(StatesGroup):
     STEP = State()
 
 
-class ManualBookingStates(StatesGroup):
-    CLIENT_NAME = State()
-    SERVICE = State()
-    DATE = State()
-    TIME = State()
+class MasterMessageStates(StatesGroup):
+    """FSM for master writing a message to client via bot."""
+    TYPING = State()
+
+
+class MasterRejectReasonStates(StatesGroup):
+    """FSM for master providing rejection reason."""
+    TYPING = State()
+
+
+class MasterCancelReasonStates(StatesGroup):
+    """FSM for master providing cancellation reason."""
+    TYPING = State()
+
+
+class ClientReplyStates(StatesGroup):
+    """FSM for client replying to master via bot."""
+    TYPING = State()

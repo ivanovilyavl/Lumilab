@@ -77,8 +77,65 @@ def booking_tabs_kb() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(text="⏳ Ожидают", callback_data="tab:pending"),
-                InlineKeyboardButton(text="📅 Предстоящие", callback_data="tab:upcoming"),
+                InlineKeyboardButton(text="📅 Сегодня", callback_data="tab:today"),
+            ],
+            [
+                InlineKeyboardButton(text="📆 Предстоящие", callback_data="tab:upcoming"),
                 InlineKeyboardButton(text="📋 История", callback_data="tab:history"),
-            ]
+            ],
+        ]
+    )
+
+
+def booking_notification_kb(booking_id: int) -> InlineKeyboardMarkup:
+    """Keyboard sent to master when new booking arrives."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Принять", callback_data=f"bk_confirm:{booking_id}"),
+                InlineKeyboardButton(text="❌ Отклонить", callback_data=f"bk_reject:{booking_id}"),
+            ],
+            [
+                InlineKeyboardButton(text="💬 Написать клиенту", callback_data=f"bk_msg:{booking_id}"),
+            ],
+        ]
+    )
+
+
+def cancel_booking_kb(booking_id: int) -> InlineKeyboardMarkup:
+    """Cancel button for confirmed bookings (master side)."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отменить запись", callback_data=f"bk_cancel:{booking_id}")],
+        ]
+    )
+
+
+def client_cancel_kb(booking_id: int) -> InlineKeyboardMarkup:
+    """Cancel button shown to client in reminders."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="❌ Отменить запись", callback_data=f"cl_cancel:{booking_id}")],
+        ]
+    )
+
+
+def client_cancel_confirm_kb(booking_id: int) -> InlineKeyboardMarkup:
+    """Confirm cancellation by client."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Да, отменить", callback_data=f"cl_cancel_yes:{booking_id}"),
+                InlineKeyboardButton(text="Нет, оставить", callback_data=f"cl_cancel_no:{booking_id}"),
+            ],
+        ]
+    )
+
+
+def client_reply_kb(booking_id: int) -> InlineKeyboardMarkup:
+    """Reply button for client when master sends a message."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💬 Ответить", callback_data=f"cl_reply:{booking_id}")],
         ]
     )

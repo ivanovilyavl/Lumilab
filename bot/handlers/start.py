@@ -34,7 +34,7 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
 
     if master and master.is_onboarded:
         await message.answer(
-            f"С возвращением, {master.display_name}! 👋\n\n"
+            f"С возвращением, {master.display_name or 'мастер'}! 👋\n\n"
             "Используйте меню для управления записями.",
             reply_markup=main_menu_kb(),
         )
@@ -43,7 +43,7 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
     if master and not master.is_onboarded:
         await message.answer(
             "Вы начали регистрацию, но не завершили. Давайте продолжим!\n\n"
-            "Как вас зовут? (Имя, которое увидят клиенты)"
+            "Как вас называть клиентам?"
         )
         await state.set_state(OnboardingStates.NAME)
         return
@@ -64,7 +64,8 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
         "👋 Добро пожаловать в ЗАПИСЬ.БОТ!\n\n"
         "Я помогу вам принимать онлайн-запись от клиентов.\n"
         "Давайте настроим ваш профиль за 2 минуты.\n\n"
-        "Как вас зовут? (Имя, которое увидят клиенты)"
+        "Как вас называть клиентам?\n"
+        "(Можно имя, название студии или любой псевдоним)"
     )
     await state.set_state(OnboardingStates.NAME)
 

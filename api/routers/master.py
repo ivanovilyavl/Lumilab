@@ -22,10 +22,11 @@ class ServiceOut(BaseModel):
 class MasterOut(BaseModel):
     id: int
     username: str
-    display_name: str
+    display_name: str | None
     bio: str | None
     photo_file_id: str | None
     niche: str | None
+    accepting_bookings: bool
     services: list[ServiceOut]
 
     model_config = {"from_attributes": True}
@@ -55,5 +56,6 @@ async def get_master(username: str, db: AsyncSession = Depends(get_db)):
         bio=master.bio,
         photo_file_id=master.photo_file_id,
         niche=master.niche,
+        accepting_bookings=master.subscription_status != "expired",
         services=[ServiceOut.model_validate(s) for s in services],
     )

@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     tribute_subscription_url: str = ""
     tribute_monthly_price_rub: int = 199
 
+    # Anonymity
+    client_id_hash_secret: str = "change_me_never_change_after_launch"
+
     # Business logic
     trial_days: int = 14
     referral_bonus_days: int = 7

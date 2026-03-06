@@ -39,4 +39,12 @@ app.conf.beat_schedule = {
         "task": "worker.tasks.analytics.send_weekly_digest",
         "schedule": 604800.0,  # weekly
     },
+    "auto-cancel-pending": {
+        "task": "worker.tasks.reminders.auto_cancel_pending",
+        "schedule": 600.0,  # every 10 min
+    },
+    "cleanup-old-messages": {
+        "task": "worker.tasks.reminders.cleanup_old_messages",
+        "schedule": 86400.0,  # daily
+    },
 }

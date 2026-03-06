@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     Time,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -27,7 +28,7 @@ class Master(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    display_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(128))
     bio: Mapped[str | None] = mapped_column(Text)
     photo_file_id: Mapped[str | None] = mapped_column(String(256))
     niche: Mapped[str | None] = mapped_column(String(64))
@@ -115,10 +116,9 @@ class Booking(Base):
     master_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("masters.id"), nullable=False)
     service_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("services.id"), nullable=False)
 
-    # Client data
-    client_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    client_phone: Mapped[str | None] = mapped_column(String(32))
-    client_telegram_id: Mapped[int | None] = mapped_column(BigInteger)
+    # Anonymous client data (no PII stored)
+    client_pseudo: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_tg_hash: Mapped[str | None] = mapped_column(String(64))
 
     # Time
     booking_date = mapped_column(Date, nullable=False)
@@ -145,6 +145,33 @@ class Booking(Base):
 
     master: Mapped["Master"] = relationship(back_populates="bookings")
     service: Mapped["Service"] = relationship()
+    messages: Mapped[list["BotMessage"]] = relationship(back_populates="booking", cascade="all, delete-orphan")
+
+
+class ClientAlias(Base):
+    __tablename__ = "client_aliases"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    tg_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    master_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("masters.id", ondelete="CASCADE"), nullable=False)
+    pseudo: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("tg_hash", "master_id", name="uq_client_alias_tg_master"),
+    )
+
+
+class BotMessage(Base):
+    __tablename__ = "bot_messages"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    booking_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False)
+    from_role: Mapped[str] = mapped_column(String(16), nullable=False)  # 'master' | 'client'
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    booking: Mapped["Booking"] = relationship(back_populates="messages")
 
 
 class Referral(Base):
