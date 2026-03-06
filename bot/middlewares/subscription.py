@@ -8,7 +8,7 @@ from db.models import Master
 from shared.config import settings
 
 # Commands allowed without active subscription
-ALLOWED_COMMANDS = {"/start", "/help", "/subscription"}
+ALLOWED_COMMANDS = {"/start", "/help", "/subscription", "/reset"}
 ALLOWED_TEXTS = {"❓ Помощь", "💳 Подписка"}
 ALLOWED_CALLBACKS = {"payments_history"}
 

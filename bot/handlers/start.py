@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 from aiogram import Router, F
-from aiogram.filters import CommandStart, CommandObject
+from aiogram.filters import Command, CommandStart, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy import select
@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.keyboards.common import niche_kb, schedule_days_kb, slot_step_kb, main_menu_kb
 from bot.states.onboarding import OnboardingStates
-from db.models import Master, Service, ScheduleTemplate, Event, Referral
+from db.models import Master, Service, ScheduleTemplate, ScheduleOverride, Event, Referral
 from shared.config import settings
 from shared.utils import generate_referral_code
 
@@ -28,6 +28,9 @@ async def log_event(db: AsyncSession, master_id: int | None, event_type: str, pa
 async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, command: CommandObject):
     telegram_id = message.from_user.id
 
+    # Always clear FSM state to avoid being stuck
+    await state.clear()
+
     # Check if master already exists
     result = await db.execute(select(Master).where(Master.telegram_id == telegram_id))
     master = result.scalar_one_or_none()
@@ -35,7 +38,8 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
     if master and master.is_onboarded:
         await message.answer(
             f"С возвращением, {master.display_name or 'мастер'}! 👋\n\n"
-            "Используйте меню для управления записями.",
+            "Используйте меню для управления записями.\n"
+            "Чтобы пройти настройку заново, нажмите /reset",
             reply_markup=main_menu_kb(),
         )
         return
@@ -315,6 +319,42 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
 
     # Send main menu
     await callback.message.answer("Вот ваше главное меню:", reply_markup=main_menu_kb())
+
+
+# ── Reset onboarding ─────────────────────────────────────────────
+
+@router.message(Command("reset"))
+async def cmd_reset(message: Message, state: FSMContext, db: AsyncSession, master: Master | None):
+    await state.clear()
+
+    if not master:
+        await message.answer("Вы ещё не зарегистрированы. Введите /start для начала.")
+        return
+
+    # Delete related data and reset master
+    await db.execute(
+        ScheduleTemplate.__table__.delete().where(ScheduleTemplate.master_id == master.id)
+    )
+    await db.execute(
+        ScheduleOverride.__table__.delete().where(ScheduleOverride.master_id == master.id)
+    )
+    await db.execute(
+        Service.__table__.delete().where(Service.master_id == master.id)
+    )
+
+    master.is_onboarded = False
+    master.display_name = None
+    master.niche = None
+    master.bio = None
+    await db.commit()
+
+    await message.answer(
+        "🔄 Профиль сброшен!\n\n"
+        "Давайте настроим всё заново.\n"
+        "Как вас называть клиентам?\n"
+        "(Можно имя, название студии или любой псевдоним)"
+    )
+    await state.set_state(OnboardingStates.NAME)
 
 
 # ── Catch unfinished onboarding ──────────────────────────────────
