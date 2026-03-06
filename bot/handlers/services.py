@@ -112,7 +112,7 @@ async def svc_toggle(callback: CallbackQuery, db: AsyncSession):
 
 
 @router.callback_query(F.data.startswith("svc_del:"))
-async def svc_delete(callback: CallbackQuery, db: AsyncSession):
+async def svc_delete(callback: CallbackQuery, db: AsyncSession, master: Master):
     service_id = int(callback.data.split(":")[1])
     service = await db.get(Service, service_id)
     if service:
@@ -120,7 +120,7 @@ async def svc_delete(callback: CallbackQuery, db: AsyncSession):
         await db.commit()
     await callback.answer("Услуга удалена")
     # Go back to list
-    await svc_back(callback, db, None)
+    await svc_back(callback, db, master)
 
 
 # ── Add service FSM ──────────────────────────────────────────
