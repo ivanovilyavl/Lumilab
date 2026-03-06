@@ -3,6 +3,7 @@ import logging
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware, Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import Message, TelegramObject
@@ -58,7 +59,7 @@ class DbMiddleware(BaseMiddleware):
 
 async def main():
     storage = RedisStorage.from_url(settings.redis_url)
-    bot = Bot(token=settings.analytics_bot_token, parse_mode=ParseMode.HTML)
+    bot = Bot(token=settings.analytics_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=storage)
 
     # Middlewares
