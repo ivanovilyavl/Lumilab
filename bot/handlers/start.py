@@ -35,19 +35,28 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
     result = await db.execute(select(Master).where(Master.telegram_id == telegram_id))
     master = result.scalar_one_or_none()
 
-    if master and master.is_onboarded:
-        await message.answer(
-            f"С возвращением, {master.display_name or 'мастер'}! 👋\n\n"
-            "Используйте меню для управления записями.\n"
-            "Чтобы пройти настройку заново, нажмите /reset",
-            reply_markup=main_menu_kb(),
+    if master:
+        # Reset existing master and restart onboarding from scratch
+        await db.execute(
+            ScheduleTemplate.__table__.delete().where(ScheduleTemplate.master_id == master.id)
         )
-        return
-
-    if master and not master.is_onboarded:
+        await db.execute(
+            ScheduleOverride.__table__.delete().where(ScheduleOverride.master_id == master.id)
+        )
+        await db.execute(
+            Service.__table__.delete().where(Service.master_id == master.id)
+        )
+        master.is_onboarded = False
+        master.display_name = None
+        master.niche = None
+        master.bio = None
+        await db.commit()
+        # Store existing master ID so process_step can update instead of insert
+        await state.update_data(existing_master_id=master.id)
         await message.answer(
-            "Вы начали регистрацию, но не завершили. Давайте продолжим!\n\n"
-            "Как вас называть клиентам?"
+            "🔄 Начнём настройку заново!\n\n"
+            "Как вас называть клиентам?\n"
+            "(Можно имя, название студии или любой псевдоним)"
         )
         await state.set_state(OnboardingStates.NAME)
         return
@@ -60,7 +69,6 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
         referrer = result.scalar_one_or_none()
         if referrer and referrer.telegram_id != telegram_id:
             referrer_id = referrer.id
-            await state.update_data(referrer_id=referrer_id)
 
     # New master — start onboarding
     await state.update_data(referrer_id=referrer_id)
@@ -242,23 +250,35 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
 
     telegram_id = callback.from_user.id
     username = callback.from_user.username or f"user_{telegram_id}"
-    referral_code = generate_referral_code()
 
-    # Create master
-    now = datetime.utcnow()
-    master = Master(
-        telegram_id=telegram_id,
-        username=username,
-        display_name=data["display_name"],
-        niche=data["niche"],
-        referral_code=referral_code,
-        is_onboarded=True,
-        subscription_status="trial",
-        trial_ends_at=now + timedelta(days=settings.trial_days),
-        referrer_id=data.get("referrer_id"),
-    )
-    db.add(master)
-    await db.flush()
+    existing_master_id = data.get("existing_master_id")
+
+    if existing_master_id:
+        # Update existing master record
+        result = await db.execute(select(Master).where(Master.id == existing_master_id))
+        master = result.scalar_one()
+        master.username = username
+        master.display_name = data["display_name"]
+        master.niche = data["niche"]
+        master.is_onboarded = True
+        await db.flush()
+    else:
+        # Create new master
+        referral_code = generate_referral_code()
+        now = datetime.utcnow()
+        master = Master(
+            telegram_id=telegram_id,
+            username=username,
+            display_name=data["display_name"],
+            niche=data["niche"],
+            referral_code=referral_code,
+            is_onboarded=True,
+            subscription_status="trial",
+            trial_ends_at=now + timedelta(days=settings.trial_days),
+            referrer_id=data.get("referrer_id"),
+        )
+        db.add(master)
+        await db.flush()
 
     # Create service
     service = Service(
@@ -286,8 +306,8 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
         )
         db.add(template)
 
-    # Create referral record if came via ref link
-    if data.get("referrer_id"):
+    # Create referral record if came via ref link (only for new masters)
+    if not existing_master_id and data.get("referrer_id"):
         referral = Referral(
             referrer_id=data["referrer_id"],
             referred_id=master.id,
@@ -295,23 +315,27 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
         db.add(referral)
 
     # Log events
-    db.add(Event(master_id=master.id, event_type="master_registered"))
+    if not existing_master_id:
+        db.add(Event(master_id=master.id, event_type="master_registered"))
+        db.add(Event(master_id=master.id, event_type="trial_started"))
+        if data.get("referrer_id"):
+            db.add(Event(master_id=master.id, event_type="referral_used", payload={"referrer_id": data["referrer_id"]}))
     db.add(Event(master_id=master.id, event_type="master_onboarded"))
-    db.add(Event(master_id=master.id, event_type="trial_started"))
-    if data.get("referrer_id"):
-        db.add(Event(master_id=master.id, event_type="referral_used", payload={"referrer_id": data["referrer_id"]}))
 
     await db.commit()
 
-    # Build link
-    link = f"https://t.me/ZapisBOT?startapp={username}"
+    # Build links
+    booking_link = f"https://t.me/{settings.bot_username}?startapp={username}"
+    ref_link = f"https://t.me/{settings.bot_username}?start=ref_{master.referral_code}"
 
     await callback.message.edit_text(
         f"🎉 <b>Готово!</b>\n\n"
         f"Ваш профиль настроен. У вас <b>{settings.trial_days} дней бесплатно</b>.\n\n"
-        f"🔗 Ваша личная ссылка для клиентов:\n"
-        f"<code>{link}</code>\n\n"
-        f"Отправьте эту ссылку первому клиенту! 🚀"
+        f"🔗 <b>Ссылка для клиентов</b> (запись):\n"
+        f"<code>{booking_link}</code>\n\n"
+        f"👥 <b>Реферальная ссылка</b> (пригласить коллегу):\n"
+        f"<code>{ref_link}</code>\n\n"
+        f"Отправьте первую ссылку вашему клиенту! 🚀"
     )
 
     await state.clear()
