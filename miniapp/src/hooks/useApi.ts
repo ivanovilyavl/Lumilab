@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { MasterType, SlotType, BookingResult } from '../types';
+import type { MasterType, SlotType, BookingResult, MasterBookingItem } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -46,6 +46,37 @@ export function useSlots(masterId: number | null, date: string | null, serviceId
   }, [masterId, date, serviceId]);
 
   return { slots, loading };
+}
+
+export function useMasterSchedule(username: string | null, initData: string | null) {
+  const [bookings, setBookings] = useState<MasterBookingItem[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!username || !initData) return;
+    setLoading(true);
+    fetch(`${API_BASE}/api/master/${username}/schedule`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Telegram-Init-Data': initData,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('not owner');
+        return res.json() as Promise<{ bookings: MasterBookingItem[] }>;
+      })
+      .then((data) => {
+        setBookings(data.bookings);
+        setIsOwner(true);
+      })
+      .catch(() => {
+        setIsOwner(false);
+      })
+      .finally(() => setLoading(false));
+  }, [username, initData]);
+
+  return { bookings, isOwner, loading };
 }
 
 export async function createBooking(data: {

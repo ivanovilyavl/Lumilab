@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { useMaster } from './hooks/useApi';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { useMaster, useMasterSchedule } from './hooks/useApi';
 import MasterProfile from './pages/MasterProfile';
 import DatePicker from './pages/DatePicker';
 import SlotPicker from './pages/SlotPicker';
 import ContactForm from './pages/ContactForm';
 import BookingConfirm from './pages/BookingConfirm';
 import BookingSuccess from './pages/BookingSuccess';
+import MasterCalendar from './pages/MasterCalendar';
 import './App.css';
 
 function getStartParam(): string | null {
@@ -23,16 +24,45 @@ function getStartParam(): string | null {
   return url.get('master');
 }
 
+const TAB_ROUTES = ['/', '/calendar'];
+
+function TabBar({ active }: { active: string }) {
+  const navigate = useNavigate();
+  return (
+    <nav className="tab-bar">
+      <button
+        className={`tab-bar-item${active === '/' ? ' active' : ''}`}
+        onClick={() => navigate('/')}
+      >
+        <span className="tab-icon">📋</span>
+        <span>Запись</span>
+      </button>
+      <button
+        className={`tab-bar-item${active === '/calendar' ? ' active' : ''}`}
+        onClick={() => navigate('/calendar')}
+      >
+        <span className="tab-icon">📅</span>
+        <span>Расписание</span>
+      </button>
+    </nav>
+  );
+}
+
 export default function App() {
   const [masterUsername, setMasterUsername] = useState<string | null>(null);
+  const [initData, setInitData] = useState<string | null>(null);
 
   const { master, loading, error } = useMaster(masterUsername);
+  const { bookings, isOwner } = useMasterSchedule(masterUsername, initData);
 
   // Booking state
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [, setSelectedSlot] = useState<string | null>(null);
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
+
+  const location = useLocation();
+  const showTabBar = isOwner && TAB_ROUTES.includes(location.pathname);
 
   // Init Telegram Web App
   useEffect(() => {
@@ -46,6 +76,7 @@ export default function App() {
         const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
         setClientName(name);
       }
+      setInitData(tg.initData || null);
     }
     setMasterUsername(getStartParam());
   }, []);
@@ -75,7 +106,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app${showTabBar ? ' with-tabs' : ''}`}>
       <Routes>
         <Route path="/" element={<MasterProfile master={master} />} />
         <Route
@@ -114,7 +145,10 @@ export default function App() {
           }
         />
         <Route path="/success" element={<BookingSuccess />} />
+        <Route path="/calendar" element={<MasterCalendar bookings={bookings} />} />
       </Routes>
+
+      {showTabBar && <TabBar active={location.pathname} />}
     </div>
   );
 }

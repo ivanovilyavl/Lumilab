@@ -316,3 +316,118 @@ body {
   color: var(--tg-theme-hint-color);
   font-size: 14px;
 }
+
+/* Tab Bar */
+.app.with-tabs {
+  padding-bottom: 72px;
+}
+
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  background: var(--tg-theme-bg-color);
+  border-top: 1px solid var(--tg-theme-secondary-bg-color);
+  z-index: 100;
+}
+
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 8px 14px;
+  border: none;
+  background: none;
+  color: var(--tg-theme-hint-color);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.tab-bar-item.active {
+  color: var(--tg-theme-button-color);
+}
+
+.tab-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Master Calendar */
+.calendar-page {
+  padding-top: 8px;
+}
+
+.booking-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tg-theme-button-color);
+  margin: 2px auto 0;
+}
+
+.booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.booking-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--tg-theme-secondary-bg-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.booking-time {
+  font-size: 15px;
+  font-weight: 700;
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+.booking-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.booking-service {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.booking-client {
+  font-size: 12px;
+  color: var(--tg-theme-hint-color);
+  margin-top: 2px;
+}
+
+.booking-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.booking-status.confirmed {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.booking-status.pending {
+  background: #fff8e1;
+  color: #f57f17;
+}

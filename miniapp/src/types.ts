@@ -30,3 +30,13 @@ export interface BookingResult {
   start_time: string;
   end_time: string;
 }
+
+export interface MasterBookingItem {
+  id: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  service_name: string;
+  client_pseudo: string;
+}
