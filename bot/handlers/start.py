@@ -389,7 +389,6 @@ async def cmd_reset(message: Message, state: FSMContext, db: AsyncSession, maste
 
 @router.message(StateFilter(OnboardingStates))
 async def onboarding_fallback(message: Message, state: FSMContext):
-    current = await state.get_state()
     await message.answer(
         "Вы ещё не завершили настройку профиля.\n"
         "Пожалуйста, ответьте на текущий вопрос или введите /start чтобы начать заново."
