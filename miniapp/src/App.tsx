@@ -42,9 +42,22 @@ function TabBar({ active }: { active: string }) {
         onClick={() => navigate('/calendar')}
       >
         <span className="tab-icon">📅</span>
-        <span>Расписание</span>
+        <span>Мой календарь</span>
       </button>
     </nav>
+  );
+}
+
+function ClientCalendarPlaceholder() {
+  return (
+    <div className="client-calendar-placeholder">
+      <span className="placeholder-icon">📅</span>
+      <h3>Мой календарь</h3>
+      <p>
+        Этот раздел доступен только для мастеров.<br />
+        Зарегистрируйтесь через <b>/start</b> в боте, чтобы принимать записи и видеть своё расписание.
+      </p>
+    </div>
   );
 }
 
@@ -62,7 +75,7 @@ export default function App() {
   const [clientPhone, setClientPhone] = useState('');
 
   const location = useLocation();
-  const showTabBar = isOwner && TAB_ROUTES.includes(location.pathname);
+  const showTabBar = TAB_ROUTES.includes(location.pathname);
 
   // Init Telegram Web App
   useEffect(() => {
@@ -84,7 +97,10 @@ export default function App() {
   if (!masterUsername) {
     return (
       <div className="app">
-        <div className="error">Мастер не указан. Откройте ссылку от мастера.</div>
+        <div className="master-cabinet-notice">
+          <span className="placeholder-icon">🔒</span>
+          <p>Сейчас тут личный кабинет мастера — для доступа зарегистрируйтесь через <b>/start</b></p>
+        </div>
       </div>
     );
   }
@@ -145,7 +161,7 @@ export default function App() {
           }
         />
         <Route path="/success" element={<BookingSuccess />} />
-        <Route path="/calendar" element={<MasterCalendar bookings={bookings} />} />
+        <Route path="/calendar" element={isOwner ? <MasterCalendar bookings={bookings} /> : <ClientCalendarPlaceholder />} />
       </Routes>
 
       {showTabBar && <TabBar active={location.pathname} />}
