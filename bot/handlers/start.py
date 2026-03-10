@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 from aiogram import Router, F
-from aiogram.filters import Command, CommandStart, CommandObject
+from aiogram.filters import Command, CommandStart, CommandObject, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy import select
@@ -383,7 +383,7 @@ async def cmd_reset(message: Message, state: FSMContext, db: AsyncSession, maste
 
 # ── Catch unfinished onboarding ──────────────────────────────────
 
-@router.message(OnboardingStates)
+@router.message(StateFilter(OnboardingStates))
 async def onboarding_fallback(message: Message, state: FSMContext):
     current = await state.get_state()
     await message.answer(
