@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.filters import Command, CommandStart, CommandObject, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, MenuButtonWebApp, WebAppInfo
+from aiogram.types import Message, CallbackQuery, MenuButtonWebApp, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,8 +36,13 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
     if command.args and command.args.startswith("book_"):
         master_username = command.args[5:]
         await message.answer(
-            "Для записи к мастеру откройте ссылку:\n"
-            f"https://t.me/{settings.bot_username}?startapp={master_username}"
+            "Нажмите кнопку ниже, чтобы записаться к мастеру:",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(
+                    text="📅 Записаться",
+                    web_app=WebAppInfo(url=f"{settings.miniapp_url}?master={master_username}"),
+                )
+            ]]),
         )
         return
 
