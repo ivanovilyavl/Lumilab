@@ -12,7 +12,7 @@ router = Router()
 @router.message(Command("mylink"))
 @router.message(F.text == "🔗 Моя ссылка")
 async def cmd_mylink(message: Message, db: AsyncSession, master: Master):
-    link = f"https://t.me/{settings.bot_username}?startapp={master.username}"
+    link = f"https://t.me/{settings.bot_username}?start=book_{master.username}"
 
     db.add(Event(master_id=master.id, event_type="link_shared"))
     await db.commit()

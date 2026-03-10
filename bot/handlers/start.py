@@ -31,6 +31,16 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
     # Always clear FSM state to avoid being stuck
     await state.clear()
 
+    # If the user came via a client booking link (?start=book_username),
+    # redirect them to the Mini App — do NOT start master onboarding.
+    if command.args and command.args.startswith("book_"):
+        master_username = command.args[5:]
+        await message.answer(
+            "Для записи к мастеру откройте ссылку:\n"
+            f"https://t.me/{settings.bot_username}?startapp={master_username}"
+        )
+        return
+
     # Check if master already exists
     result = await db.execute(select(Master).where(Master.telegram_id == telegram_id))
     master = result.scalar_one_or_none()
@@ -325,7 +335,7 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
     await db.commit()
 
     # Build links
-    booking_link = f"https://t.me/{settings.bot_username}?startapp={username}"
+    booking_link = f"https://t.me/{settings.bot_username}?start=book_{username}"
     ref_link = f"https://t.me/{settings.bot_username}?start=ref_{master.referral_code}"
 
     await callback.message.edit_text(
