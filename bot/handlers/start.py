@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.filters import Command, CommandStart, CommandObject, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, MenuButtonWebApp, WebAppInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -350,6 +350,15 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
 
     await state.clear()
     await callback.answer()
+
+    # Set personalized menu button so master can open Mini App directly
+    await callback.bot.set_chat_menu_button(
+        chat_id=callback.from_user.id,
+        menu_button=MenuButtonWebApp(
+            text="Открыть",
+            web_app=WebAppInfo(url=f"{settings.miniapp_url}?master={username}"),
+        ),
+    )
 
     # Send main menu
     await callback.message.answer("Вот ваше главное меню:", reply_markup=main_menu_kb())

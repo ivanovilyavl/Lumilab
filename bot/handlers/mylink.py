@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, MenuButtonWebApp, WebAppInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import Master, Event
@@ -16,6 +16,15 @@ async def cmd_mylink(message: Message, db: AsyncSession, master: Master):
 
     db.add(Event(master_id=master.id, event_type="link_shared"))
     await db.commit()
+
+    # Update personalized menu button so Mini App opens with correct master
+    await message.bot.set_chat_menu_button(
+        chat_id=message.from_user.id,
+        menu_button=MenuButtonWebApp(
+            text="Открыть",
+            web_app=WebAppInfo(url=f"{settings.miniapp_url}?master={master.username}"),
+        ),
+    )
 
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
