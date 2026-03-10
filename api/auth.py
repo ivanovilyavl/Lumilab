@@ -1,6 +1,6 @@
 import hashlib
 import hmac
-from urllib.parse import unquote
+from urllib.parse import parse_qsl
 
 from shared.config import settings
 
@@ -8,8 +8,8 @@ from shared.config import settings
 def validate_telegram_init_data(init_data: str) -> dict | None:
     """Validate Telegram Mini App initData using HMAC-SHA256."""
     try:
-        params = dict(pair.split("=", 1) for pair in init_data.split("&"))
-    except ValueError:
+        params = dict(parse_qsl(init_data, keep_blank_values=True))
+    except Exception:
         return None
 
     received_hash = params.pop("hash", None)
