@@ -5,6 +5,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import Master, Referral
+from shared.config import settings
 
 router = Router()
 
@@ -12,7 +13,7 @@ router = Router()
 @router.message(Command("referral"))
 @router.message(F.text == "🎁 Рефералы")
 async def cmd_referral(message: Message, db: AsyncSession, master: Master):
-    ref_link = f"https://t.me/ZapisBOT?start=ref_{master.referral_code}"
+    ref_link = f"https://t.me/{settings.bot_username}?start=ref_{master.referral_code}"
 
     # Count referrals
     result = await db.execute(
@@ -53,5 +54,5 @@ async def cmd_referral(message: Message, db: AsyncSession, master: Master):
 
 @router.callback_query(F.data == "ref_copy")
 async def ref_copy(callback, master: Master):
-    ref_link = f"https://t.me/ZapisBOT?start=ref_{master.referral_code}"
+    ref_link = f"https://t.me/{settings.bot_username}?start=ref_{master.referral_code}"
     await callback.answer(f"Ссылка: {ref_link}", show_alert=True)

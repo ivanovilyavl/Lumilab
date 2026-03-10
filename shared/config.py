@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Telegram
     bot_token: str = ""
-    bot_username: str = "ZapisBOT"
+    bot_username: str = "plotinahelperbot"
     analytics_bot_token: str = ""
     analytics_admin_ids: str = ""
     miniapp_url: str = "http://localhost:5173"
