@@ -48,7 +48,7 @@ async def main():
     logger.info("Menu button set to %s", settings.miniapp_url)
 
     logger.info("Bot starting...")
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, drop_pending_updates=True)
 
 
 if __name__ == "__main__":
