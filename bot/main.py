@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.types import MenuButtonWebApp, WebAppInfo
 
 from bot.handlers import start, profile, services, schedule, bookings, subscription, referral, mylink, help
 from bot.middlewares.auth import AuthMiddleware
@@ -36,6 +37,15 @@ async def main():
     dp.include_router(referral.router)
     dp.include_router(mylink.router)
     dp.include_router(help.router)
+
+    # Set Web App menu button so Telegram knows where to open the Mini App
+    await bot.set_chat_menu_button(
+        menu_button=MenuButtonWebApp(
+            text="Открыть",
+            web_app=WebAppInfo(url=settings.miniapp_url),
+        )
+    )
+    logger.info("Menu button set to %s", settings.miniapp_url)
 
     logger.info("Bot starting...")
     await dp.start_polling(bot)
