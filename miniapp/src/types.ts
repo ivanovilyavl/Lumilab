@@ -6,6 +6,12 @@ export interface ServiceType {
   duration_min: number;
 }
 
+export interface QAItemType {
+  id: number;
+  question: string;
+  answer: string;
+}
+
 export interface MasterType {
   id: number;
   username: string;
@@ -14,6 +20,7 @@ export interface MasterType {
   photo_file_id: string | null;
   niche: string | null;
   services: ServiceType[];
+  qa_items: QAItemType[];
 }
 
 export interface SlotType {

@@ -45,3 +45,8 @@ class MasterCancelReasonStates(StatesGroup):
 class ClientReplyStates(StatesGroup):
     """FSM for client replying to master via bot."""
     TYPING = State()
+
+
+class AddQAStates(StatesGroup):
+    QUESTION = State()
+    ANSWER = State()

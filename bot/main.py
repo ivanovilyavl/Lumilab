@@ -8,7 +8,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import MenuButtonWebApp, WebAppInfo
 from sqlalchemy import select
 
-from bot.handlers import start, profile, services, schedule, bookings, subscription, referral, mylink, help
+from bot.handlers import start, profile, services, schedule, bookings, subscription, referral, mylink, help, qa
 from bot.middlewares.auth import AuthMiddleware
 from bot.middlewares.subscription import SubscriptionMiddleware
 from db.models import Master
@@ -63,6 +63,7 @@ async def main():
     dp.include_router(referral.router)
     dp.include_router(mylink.router)
     dp.include_router(help.router)
+    dp.include_router(qa.router)
 
     # Set default Web App menu button (fallback for non-masters / unregistered users)
     await bot.set_chat_menu_button(

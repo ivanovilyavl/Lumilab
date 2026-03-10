@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { MasterType } from '../types';
 
@@ -18,6 +19,7 @@ export default function MasterProfile({ master }: Props) {
   const navigate = useNavigate();
   const initial = master.display_name.charAt(0).toUpperCase();
   const nicheIcon = nicheIcons[master.niche || 'other'] || '⭐';
+  const [openQA, setOpenQA] = useState<number | null>(null);
 
   return (
     <div>
@@ -50,6 +52,27 @@ export default function MasterProfile({ master }: Props) {
 
       {master.services.length === 0 && (
         <div className="no-slots">Мастер пока не добавил услуг</div>
+      )}
+
+      {master.qa_items && master.qa_items.length > 0 && (
+        <>
+          <div className="section-title">Вопросы и ответы</div>
+          {master.qa_items.map((item) => (
+            <div
+              key={item.id}
+              className="qa-item"
+              onClick={() => setOpenQA(openQA === item.id ? null : item.id)}
+            >
+              <div className="qa-question">
+                <span>{item.question}</span>
+                <span className="qa-chevron">{openQA === item.id ? '▲' : '▼'}</span>
+              </div>
+              {openQA === item.id && (
+                <div className="qa-answer">{item.answer}</div>
+              )}
+            </div>
+          ))}
+        </>
       )}
     </div>
   );

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.auth import validate_telegram_init_data
 from api.deps import get_db
-from db.models import Booking, Master, Service
+from db.models import Booking, Master, QAItem, Service
 
 router = APIRouter(prefix="/api", tags=["master"])
 
@@ -24,6 +24,14 @@ class ServiceOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class QAItemOut(BaseModel):
+    id: int
+    question: str
+    answer: str
+
+    model_config = {"from_attributes": True}
+
+
 class MasterOut(BaseModel):
     id: int
     username: str
@@ -33,6 +41,7 @@ class MasterOut(BaseModel):
     niche: str | None
     accepting_bookings: bool
     services: list[ServiceOut]
+    qa_items: list[QAItemOut]
 
     model_config = {"from_attributes": True}
 
@@ -125,6 +134,14 @@ async def get_master(username: str, db: AsyncSession = Depends(get_db)):
     )
     services = list(result.scalars().all())
 
+    qa_result = await db.execute(
+        select(QAItem).where(
+            QAItem.master_id == master.id,
+            QAItem.is_active == True,
+        ).order_by(QAItem.sort_order)
+    )
+    qa_items = list(qa_result.scalars().all())
+
     return MasterOut(
         id=master.id,
         username=master.username,
@@ -134,4 +151,5 @@ async def get_master(username: str, db: AsyncSession = Depends(get_db)):
         niche=master.niche,
         accepting_bookings=master.subscription_status != "expired",
         services=[ServiceOut.model_validate(s) for s in services],
+        qa_items=[QAItemOut.model_validate(q) for q in qa_items],
     )

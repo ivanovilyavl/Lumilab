@@ -59,6 +59,7 @@ class Master(Base):
         back_populates="master", cascade="all, delete-orphan"
     )
     bookings: Mapped[list["Booking"]] = relationship(back_populates="master")
+    qa_items: Mapped[list["QAItem"]] = relationship(back_populates="master", cascade="all, delete-orphan")
 
 
 class Service(Base):
@@ -172,6 +173,20 @@ class BotMessage(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     booking: Mapped["Booking"] = relationship(back_populates="messages")
+
+
+class QAItem(Base):
+    __tablename__ = "qa_items"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    master_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("masters.id", ondelete="CASCADE"), nullable=False)
+    question: Mapped[str] = mapped_column(String(256), nullable=False)
+    answer: Mapped[str] = mapped_column(Text, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    master: Mapped["Master"] = relationship(back_populates="qa_items")
 
 
 class Referral(Base):

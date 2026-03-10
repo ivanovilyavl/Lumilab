@@ -463,3 +463,36 @@ body {
   background: #fff8e1;
   color: #f57f17;
 }
+
+/* Q&A */
+.qa-item {
+  background: var(--tg-theme-secondary-bg-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.qa-question {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.qa-chevron {
+  font-size: 11px;
+  color: var(--tg-theme-hint-color);
+  flex-shrink: 0;
+}
+
+.qa-answer {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tg-theme-hint-color);
+  border-top: 1px solid rgba(0,0,0,0.06);
+  padding-top: 10px;
+}
