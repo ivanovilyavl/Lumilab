@@ -36,39 +36,35 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
     master = result.scalar_one_or_none()
 
     if master:
-        if master.is_onboarded:
-            # Already set up — just show main menu
-            await message.answer(
-                "С возвращением! 👋\nВот ваше главное меню:",
-                reply_markup=main_menu_kb(),
-            )
-        else:
-            # Onboarding was started but not finished — resume it
-            await state.update_data(existing_master_id=master.id)
-            await message.answer(
-                "Давайте продолжим настройку профиля.\n\n"
-                "Как вас называть клиентам?\n"
-                "(Можно имя, название студии или любой псевдоним)"
-            )
-            await state.set_state(OnboardingStates.NAME)
-        return
-
-    # If the user came via a client booking link (?startapp=username or ?start=book_username),
-    # they are a client, not a master — send them back to the Mini App.
-    args = command.args or ""
-    if args.startswith("book_"):
-        master_username = args[5:]
-        bot_username = settings.bot_username
-        await message.answer(
-            "Для записи к мастеру откройте ссылку:\n"
-            f"https://t.me/{bot_username}?startapp={master_username}"
+        # Reset existing master and restart onboarding from scratch
+        await db.execute(
+            ScheduleTemplate.__table__.delete().where(ScheduleTemplate.master_id == master.id)
         )
+        await db.execute(
+            ScheduleOverride.__table__.delete().where(ScheduleOverride.master_id == master.id)
+        )
+        await db.execute(
+            Service.__table__.delete().where(Service.master_id == master.id)
+        )
+        master.is_onboarded = False
+        master.display_name = None
+        master.niche = None
+        master.bio = None
+        await db.commit()
+        # Store existing master ID so process_step can update instead of insert
+        await state.update_data(existing_master_id=master.id)
+        await message.answer(
+            "🔄 Начнём настройку заново!\n\n"
+            "Как вас называть клиентам?\n"
+            "(Можно имя, название студии или любой псевдоним)"
+        )
+        await state.set_state(OnboardingStates.NAME)
         return
 
     # Parse referral code from deep link: /start ref_XXXX
     referrer_id = None
-    if args.startswith("ref_"):
-        ref_code = args[4:]
+    if command.args and command.args.startswith("ref_"):
+        ref_code = command.args[4:]
         result = await db.execute(select(Master).where(Master.referral_code == ref_code))
         referrer = result.scalar_one_or_none()
         if referrer and referrer.telegram_id != telegram_id:
