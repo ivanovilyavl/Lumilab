@@ -6,7 +6,7 @@ from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
-from aiogram.types import ErrorEvent, Message, TelegramObject
+from aiogram.types import BotCommand, ErrorEvent, MenuButtonWebApp, Message, TelegramObject, WebAppInfo
 
 from analytics_bot.handlers import (
     bookings_stats,
@@ -104,6 +104,29 @@ async def main():
     @dp.shutdown()
     async def on_shutdown(**kwargs) -> None:
         await send_alert("🛑 <b>Аналитик-бот остановлен</b>")
+
+    # Set bot command menu
+    await bot.set_my_commands([
+        BotCommand(command="panel", description="Открыть панель аналитики"),
+        BotCommand(command="stats", description="Сводка за сегодня / неделю"),
+        BotCommand(command="users", description="Статистика пользователей"),
+        BotCommand(command="revenue", description="Выручка и платежи"),
+        BotCommand(command="masters", description="Топ мастеров"),
+        BotCommand(command="bookings", description="Статистика записей"),
+        BotCommand(command="funnels", description="Воронки"),
+        BotCommand(command="cohorts", description="Когортный анализ"),
+        BotCommand(command="export", description="Выгрузка данных в CSV"),
+    ])
+
+    # Set default menu button — WebApp panel
+    admin_url = f"{settings.miniapp_url.rstrip('/')}/admin/"
+    await bot.set_chat_menu_button(
+        menu_button=MenuButtonWebApp(
+            text="Панель",
+            web_app=WebAppInfo(url=admin_url),
+        )
+    )
+    logger.info("Analytics bot menu configured, panel URL: %s", admin_url)
 
     logger.info("Analytics bot starting...")
     await dp.start_polling(bot)
