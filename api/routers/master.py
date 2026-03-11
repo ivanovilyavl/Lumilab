@@ -247,7 +247,7 @@ async def get_master(username: str, db: AsyncSession = Depends(get_db)):
         niche=master.niche,
         language=master.language or "ru",
         currency=master.currency or "RUB",
-        accepting_bookings=master.subscription_status != "expired",
+        accepting_bookings=True,
         services=[ServiceOut.model_validate(s) for s in services],
         qa_items=[QAItemOut.model_validate(q) for q in qa_items],
     )

@@ -40,10 +40,6 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
     if not master or not master.is_active:
         raise HTTPException(404, "Master not found")
 
-    # Check subscription — expired masters don't accept new bookings
-    if master.subscription_status == "expired":
-        raise HTTPException(403, "Мастер временно не принимает записи")
-
     # Validate service
     service = await db.get(Service, data.service_id)
     if not service or service.master_id != data.master_id or not service.is_active:
@@ -127,7 +123,7 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
         from aiogram import Bot
         from aiogram.client.default import DefaultBotProperties
         from aiogram.enums import ParseMode
-        from bot.keyboards.common import booking_notification_kb
+        from bot.keyboards.common import booking_notification_kb, client_cancel_kb
 
         bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
         lang = getattr(master, "language", "ru") or "ru"
@@ -158,6 +154,7 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
                   price=price_str,
                   date=booking_date.strftime("%d.%m.%Y"),
                   time=start_time.strftime("%H:%M")),
+                reply_markup=client_cancel_kb(booking.id),
             )
 
         await bot.session.close()

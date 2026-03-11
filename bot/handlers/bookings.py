@@ -217,6 +217,7 @@ async def bk_confirm(callback: CallbackQuery, db: AsyncSession, master: Master):
           service_line=service_line,
           date=booking.booking_date.strftime("%d.%m.%Y"),
           time=booking.start_time.strftime("%H:%M")),
+        cancel_kb_booking_id=booking.id,
     )
 
     await callback.message.edit_text(
@@ -538,6 +539,7 @@ async def _notify_client(
     db: AsyncSession,
     text: str,
     reply_kb_booking_id: int | None = None,
+    cancel_kb_booking_id: int | None = None,
 ):
     """Send a message to the client identified by tg_hash (via Redis reverse lookup)."""
     client_tg_id = await _find_client_tg_id(booking)
@@ -545,7 +547,10 @@ async def _notify_client(
         return
 
     kb = None
-    if reply_kb_booking_id:
+    if cancel_kb_booking_id:
+        from bot.keyboards.common import client_cancel_kb
+        kb = client_cancel_kb(cancel_kb_booking_id)
+    elif reply_kb_booking_id:
         kb = client_reply_kb(reply_kb_booking_id)
 
     try:

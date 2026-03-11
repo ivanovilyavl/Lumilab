@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.states.onboarding import AddServiceStates, EditServiceStates
 from db.models import Master, Service
-from shared.config import settings
 
 router = Router()
 
@@ -238,20 +237,6 @@ async def svc_delete(callback: CallbackQuery, db: AsyncSession, master: Master):
 
 @router.callback_query(F.data == "svc_add")
 async def svc_add_start(callback: CallbackQuery, state: FSMContext, db: AsyncSession, master: Master):
-    # Check free tier limit
-    if master.subscription_status != "active":
-        result = await db.execute(
-            select(Service).where(Service.master_id == master.id)
-        )
-        count = len(list(result.scalars().all()))
-        if count >= settings.free_tier_max_services:
-            await callback.answer(
-                f"На бесплатном тарифе максимум {settings.free_tier_max_services} услуги. "
-                "Оформите подписку для безлимита.",
-                show_alert=True,
-            )
-            return
-
     await state.update_data(currency=master.currency or "RUB")
     await callback.message.edit_text("Введите <b>название</b> новой услуги:")
     await state.set_state(AddServiceStates.NAME)

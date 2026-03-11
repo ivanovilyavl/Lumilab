@@ -31,6 +31,7 @@ async def cmd_subscription(message: Message, db: AsyncSession, master: Master):
             f"💳 <b>Подписка</b>\n\n"
             f"📌 Статус: Пробный период\n"
             f"⏰ Осталось дней: <b>{left}</b>\n"
+            f"\n✅ Бот полностью бесплатен — запись работает без ограничений."
         )
     elif status == "active":
         left = days_left(master.subscription_ends_at)
@@ -45,11 +46,9 @@ async def cmd_subscription(message: Message, db: AsyncSession, master: Master):
     else:
         text = (
             f"💳 <b>Подписка</b>\n\n"
-            f"📌 Статус: ❌ Неактивна\n"
-            f"Без подписки клиенты не смогут записаться.\n"
+            f"📌 Статус: Пробный период завершён\n"
+            f"\n✅ Бот полностью бесплатен — запись работает без ограничений."
         )
-
-    text += f"\n💰 Стоимость: {settings.tribute_monthly_price_rub} ₽/мес"
 
     buttons = []
     if settings.tribute_subscription_url:
