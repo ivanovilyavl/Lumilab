@@ -66,7 +66,7 @@ export default function App() {
   const [initData, setInitData] = useState<string | null>(null);
 
   const { master, loading, error } = useMaster(masterUsername);
-  const { bookings, isOwner } = useMasterSchedule(masterUsername, initData);
+  const { bookings, isOwner, refetch } = useMasterSchedule(masterUsername, initData);
 
   // Booking state
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -161,7 +161,21 @@ export default function App() {
           }
         />
         <Route path="/success" element={<BookingSuccess />} />
-        <Route path="/calendar" element={isOwner ? <MasterCalendar bookings={bookings} /> : <ClientCalendarPlaceholder />} />
+        <Route
+          path="/calendar"
+          element={
+            isOwner && master && initData ? (
+              <MasterCalendar
+                bookings={bookings}
+                master={master}
+                initData={initData}
+                onBookingCreated={refetch}
+              />
+            ) : (
+              <ClientCalendarPlaceholder />
+            )
+          }
+        />
       </Routes>
 
       {showTabBar && <TabBar active={location.pathname} />}

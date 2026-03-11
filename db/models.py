@@ -135,6 +135,12 @@ class Booking(Base):
     reminder_2h_sent: Mapped[bool] = mapped_column(Boolean, default=False)
 
     source: Mapped[str] = mapped_column(String(32), default="miniapp")
+
+    # Master-created bookings
+    client_notes: Mapped[str | None] = mapped_column(String(256))  # e.g. phone number
+    is_recurring: Mapped[bool] = mapped_column(Boolean, default=False)
+    recurrence_end_date = mapped_column(Date, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 

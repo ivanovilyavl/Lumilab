@@ -46,4 +46,5 @@ export interface MasterBookingItem {
   status: string;
   service_name: string;
   client_pseudo: string;
+  client_notes: string | null;
 }
