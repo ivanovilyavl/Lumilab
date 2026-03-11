@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import master, slots, bookings, tribute, clients
+from api.routers import master, slots, bookings, tribute, clients, admin
 from shared.config import settings
 
 app = FastAPI(title="ЗАПИСЬ.БОТ API", version="1.0.0")
@@ -19,6 +19,7 @@ app.include_router(master.router)
 app.include_router(slots.router)
 app.include_router(bookings.router)
 app.include_router(clients.router)
+app.include_router(admin.router)
 # [DISABLED - monetization] app.include_router(tribute.router)
 
 

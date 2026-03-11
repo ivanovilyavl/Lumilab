@@ -18,6 +18,7 @@ from analytics_bot.handlers import (
     master_info,
     niches,
     overview,
+    panel,
     referrals,
     revenue,
     users,
@@ -70,6 +71,7 @@ async def main():
     dp.message.middleware(DbMiddleware())
 
     # Routers
+    dp.include_router(panel.router)
     dp.include_router(overview.router)
     dp.include_router(users.router)
     dp.include_router(revenue.router)

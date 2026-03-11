@@ -1,5 +1,5 @@
 # Stage 1: Build Mini App
-FROM node:20-alpine AS build
+FROM node:20-alpine AS build-miniapp
 
 WORKDIR /app
 COPY miniapp/package.json miniapp/package-lock.json* ./
@@ -7,6 +7,16 @@ RUN npm ci
 COPY miniapp/ .
 RUN npm run build
 
-# Stage 2: Nginx with built Mini App
+# Stage 2: Build Admin Mini App
+FROM node:20-alpine AS build-admin
+
+WORKDIR /app
+COPY admin-miniapp/package.json ./
+RUN npm install
+COPY admin-miniapp/ .
+RUN npm run build
+
+# Stage 3: Nginx with both apps
 FROM nginx:alpine
-COPY --from=build /app/dist /var/www/miniapp
+COPY --from=build-miniapp /app/dist /var/www/miniapp
+COPY --from=build-admin /app/dist /var/www/admin
