@@ -161,7 +161,7 @@ async def seed():
                 db.add(Booking(
                     master_id=master.id,
                     service_id=svc.id,
-                    client_name=random.choice(CLIENT_NAMES),
+                    client_name="Клиент",  # [DISABLED] random.choice(CLIENT_NAMES),
                     client_phone=f"+7999{random.randint(1000000, 9999999)}",
                     client_telegram_id=random.randint(200000, 299999),
                     booking_date=bdate,

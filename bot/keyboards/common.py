@@ -6,8 +6,9 @@ def main_menu_kb() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text="📋 Услуги"), KeyboardButton(text="📅 Расписание")],
             [KeyboardButton(text="📖 Записи"), KeyboardButton(text="🔗 Моя ссылка")],
-            [KeyboardButton(text="👤 Профиль"), KeyboardButton(text="💳 Подписка")],
-            [KeyboardButton(text="🎁 Рефералы"), KeyboardButton(text="❓ Помощь")],
+            [KeyboardButton(text="👤 Профиль"), KeyboardButton(text="❓ Помощь")],
+            # [DISABLED - monetization] KeyboardButton(text="💳 Подписка")
+            # [DISABLED - referral] KeyboardButton(text="🎁 Рефералы")
         ],
         resize_keyboard=True,
     )

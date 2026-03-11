@@ -18,7 +18,7 @@ app.add_middleware(
 app.include_router(master.router)
 app.include_router(slots.router)
 app.include_router(bookings.router)
-app.include_router(tribute.router)
+# [DISABLED - monetization] app.include_router(tribute.router)
 
 
 @app.get("/healthcheck")

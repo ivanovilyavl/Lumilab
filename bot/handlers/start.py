@@ -76,17 +76,17 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
         await state.set_state(OnboardingStates.NAME)
         return
 
-    # Parse referral code from deep link: /start ref_XXXX
-    referrer_id = None
-    if command.args and command.args.startswith("ref_"):
-        ref_code = command.args[4:]
-        result = await db.execute(select(Master).where(Master.referral_code == ref_code))
-        referrer = result.scalar_one_or_none()
-        if referrer and referrer.telegram_id != telegram_id:
-            referrer_id = referrer.id
+    # [DISABLED - referral] Parse referral code from deep link: /start ref_XXXX
+    # referrer_id = None
+    # if command.args and command.args.startswith("ref_"):
+    #     ref_code = command.args[4:]
+    #     result = await db.execute(select(Master).where(Master.referral_code == ref_code))
+    #     referrer = result.scalar_one_or_none()
+    #     if referrer and referrer.telegram_id != telegram_id:
+    #         referrer_id = referrer.id
 
     # New master — start onboarding
-    await state.update_data(referrer_id=referrer_id)
+    await state.update_data(referrer_id=None)
     await message.answer(
         "👋 Добро пожаловать в ЗАПИСЬ.БОТ!\n\n"
         "Я помогу вам принимать онлайн-запись от клиентов.\n"
@@ -321,36 +321,36 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
         )
         db.add(template)
 
-    # Create referral record if came via ref link (only for new masters)
-    if not existing_master_id and data.get("referrer_id"):
-        referral = Referral(
-            referrer_id=data["referrer_id"],
-            referred_id=master.id,
-        )
-        db.add(referral)
+    # [DISABLED - referral] Create referral record if came via ref link
+    # if not existing_master_id and data.get("referrer_id"):
+    #     referral = Referral(
+    #         referrer_id=data["referrer_id"],
+    #         referred_id=master.id,
+    #     )
+    #     db.add(referral)
 
     # Log events
     if not existing_master_id:
         db.add(Event(master_id=master.id, event_type="master_registered"))
         db.add(Event(master_id=master.id, event_type="trial_started"))
-        if data.get("referrer_id"):
-            db.add(Event(master_id=master.id, event_type="referral_used", payload={"referrer_id": data["referrer_id"]}))
+        # [DISABLED - referral]
+        # if data.get("referrer_id"):
+        #     db.add(Event(master_id=master.id, event_type="referral_used", payload={"referrer_id": data["referrer_id"]}))
     db.add(Event(master_id=master.id, event_type="master_onboarded"))
 
     await db.commit()
 
     # Build links
     booking_link = f"https://t.me/{settings.bot_username}?start=book_{username}"
-    ref_link = f"https://t.me/{settings.bot_username}?start=ref_{master.referral_code}"
+    # [DISABLED - referral] ref_link = f"https://t.me/{settings.bot_username}?start=ref_{master.referral_code}"
 
     await callback.message.edit_text(
         f"🎉 <b>Готово!</b>\n\n"
-        f"Ваш профиль настроен. У вас <b>{settings.trial_days} дней бесплатно</b>.\n\n"
+        f"Ваш профиль настроен.\n\n"
         f"🔗 <b>Ссылка для клиентов</b> (запись):\n"
         f"<code>{booking_link}</code>\n\n"
-        f"👥 <b>Реферальная ссылка</b> (пригласить коллегу):\n"
-        f"<code>{ref_link}</code>\n\n"
-        f"Отправьте первую ссылку вашему клиенту! 🚀"
+        f"Отправьте ссылку вашему клиенту! 🚀"
+        # [DISABLED - referral] Referral link section removed
     )
 
     await state.clear()

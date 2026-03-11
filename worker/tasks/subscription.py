@@ -149,14 +149,23 @@ async def _apply_referral_bonuses():
 
 @app.task(name="worker.tasks.subscription.check_trial_expiry")
 def check_trial_expiry():
-    asyncio.run(_check_trial_expiry())
+    # [DISABLED - monetization]
+    logger.info("check_trial_expiry: disabled, skipping")
+    return
+    # asyncio.run(_check_trial_expiry())
 
 
 @app.task(name="worker.tasks.subscription.mark_subscription_expired")
 def mark_subscription_expired():
-    asyncio.run(_mark_subscription_expired())
+    # [DISABLED - monetization]
+    logger.info("mark_subscription_expired: disabled, skipping")
+    return
+    # asyncio.run(_mark_subscription_expired())
 
 
 @app.task(name="worker.tasks.subscription.apply_referral_bonuses")
 def apply_referral_bonuses():
-    asyncio.run(_apply_referral_bonuses())
+    # [DISABLED - referral]
+    logger.info("apply_referral_bonuses: disabled, skipping")
+    return
+    # asyncio.run(_apply_referral_bonuses())
