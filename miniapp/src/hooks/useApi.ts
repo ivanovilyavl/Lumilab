@@ -160,6 +160,7 @@ export async function createMasterBooking(
     start_time: string;
     client_name: string;
     client_phone?: string;
+    client_tg_username?: string;
     is_recurring?: boolean;
     recurrence_end_date?: string;
   },

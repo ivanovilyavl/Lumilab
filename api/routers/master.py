@@ -66,6 +66,7 @@ class MasterBookingCreate(BaseModel):
     start_time: str     # HH:MM
     client_name: str
     client_phone: str | None = None
+    client_tg_username: str | None = None
     is_recurring: bool = False
     recurrence_end_date: str | None = None  # YYYY-MM-DD
 
@@ -162,7 +163,14 @@ async def create_master_booking(
             raise HTTPException(400, f"Максимум {MAX_RECURRING_INSTANCES} повторений (около 1 года)")
 
     client_pseudo = data.client_name.strip()
-    client_notes = data.client_phone.strip() if data.client_phone else None
+    notes_parts = []
+    if data.client_tg_username:
+        tg = data.client_tg_username.strip().lstrip('@')
+        if tg:
+            notes_parts.append(f"@{tg}")
+    if data.client_phone and data.client_phone.strip():
+        notes_parts.append(data.client_phone.strip())
+    client_notes = " · ".join(notes_parts) if notes_parts else None
     recurrence_end = date.fromisoformat(data.recurrence_end_date) if data.is_recurring and data.recurrence_end_date else None
 
     created_ids: list[int] = []

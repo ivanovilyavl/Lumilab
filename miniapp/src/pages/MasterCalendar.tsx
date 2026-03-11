@@ -27,6 +27,7 @@ export default function MasterCalendar({ bookings, master, initData, onBookingCr
   const [formTime, setFormTime] = useState<string>('10:00');
   const [clientName, setClientName] = useState<string>('');
   const [clientPhone, setClientPhone] = useState<string>('');
+  const [clientTgUsername, setClientTgUsername] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
   const [recurringEnd, setRecurringEnd] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +57,7 @@ export default function MasterCalendar({ bookings, master, initData, onBookingCr
     setFormTime('10:00');
     setClientName('');
     setClientPhone('');
+    setClientTgUsername('');
     setIsRecurring(false);
     setRecurringEnd('');
     setServiceId(master.services[0]?.id ?? 0);
@@ -82,6 +84,7 @@ export default function MasterCalendar({ bookings, master, initData, onBookingCr
         start_time: formTime,
         client_name: clientName.trim(),
         client_phone: clientPhone.trim() || undefined,
+        client_tg_username: clientTgUsername.trim() || undefined,
         is_recurring: isRecurring,
         recurrence_end_date: isRecurring ? recurringEnd : undefined,
       });
@@ -220,6 +223,17 @@ export default function MasterCalendar({ bookings, master, initData, onBookingCr
                   placeholder="+7 999 123-45-67"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Ник в Telegram (необязательно)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="@username"
+                  value={clientTgUsername}
+                  onChange={(e) => setClientTgUsername(e.target.value)}
                 />
               </div>
 

@@ -31,14 +31,15 @@ export default function ConsentScreen({ master }: Props) {
 
       <div className="consent-block">
         <p className="consent-intro">
-          Для завершения записи вам потребуется указать имя и телефон. Эти данные будут переданы:
+          Для работы сервиса мы собираем ваши данные (имя, телефон, Telegram ID).
+          Они используются для:
         </p>
         <ul className="consent-list">
           <li>
-            <b>{masterName}</b> — для организации и подтверждения вашей записи
+            организации записи и уведомлений от <b>{masterName}</b>
           </li>
           <li>
-            <b>Команде бота «Plotina bot»</b> — для работы сервиса онлайн-записи
+            функционирования бота <b>«Plotina bot»</b>: напоминаний, истории визитов и улучшения сервиса
           </li>
         </ul>
         <p className="consent-note">Данные не передаются третьим лицам.</p>
