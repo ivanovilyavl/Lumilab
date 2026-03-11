@@ -121,7 +121,7 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
     await db.commit()
     await db.refresh(booking)
 
-    # Notify master about new booking
+    # Notify master and client about new booking
     try:
         from aiogram import Bot
         from aiogram.client.default import DefaultBotProperties
@@ -129,6 +129,7 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
         from bot.keyboards.common import booking_notification_kb
 
         bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+
         await bot.send_message(
             master.telegram_id,
             f"📅 Новая запись!\n\n"
@@ -137,6 +138,17 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
             f"📆 {booking_date.strftime('%d.%m.%Y')} в {start_time.strftime('%H:%M')}",
             reply_markup=booking_notification_kb(booking.id),
         )
+
+        if data.client_telegram_id:
+            await bot.send_message(
+                data.client_telegram_id,
+                f"📋 <b>Заявка принята!</b>\n\n"
+                f"👤 {master.display_name or 'Мастер'}\n"
+                f"💅 {service.name} · {service.duration_min} мин · {service.price} ₽\n"
+                f"📆 {booking_date.strftime('%d.%m.%Y')} в {start_time.strftime('%H:%M')}\n\n"
+                f"⏳ Ожидайте подтверждения от мастера.",
+            )
+
         await bot.session.close()
     except Exception:
         pass

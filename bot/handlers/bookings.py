@@ -190,16 +190,24 @@ async def bk_confirm(callback: CallbackQuery, db: AsyncSession, master: Master):
         await callback.answer("Запись уже обработана", show_alert=True)
         return
 
+    service = await db.get(Service, booking.service_id)
+
     booking.status = "confirmed"
     db.add(Event(master_id=master.id, event_type="booking_confirmed", payload={"booking_id": booking.id}))
     await db.commit()
     await callback.answer("✅ Запись подтверждена!")
 
+    service_line = (
+        f"💅 {service.name} · {service.duration_min} мин · {service.price} ₽\n"
+        if service else ""
+    )
     await _notify_client(
         callback.bot, booking, db,
-        f"✅ Ваша запись подтверждена!\n\n"
+        f"✅ <b>Ваша запись подтверждена!</b>\n\n"
         f"👤 {master.display_name or 'Мастер'}\n"
-        f"📅 {booking.booking_date.strftime('%d.%m.%Y')} в {booking.start_time.strftime('%H:%M')}",
+        f"{service_line}"
+        f"📅 {booking.booking_date.strftime('%d.%m.%Y')} в {booking.start_time.strftime('%H:%M')}\n\n"
+        f"🔔 Мы напомним вам за 24 ч и за 2 ч до визита.",
     )
 
     await callback.message.edit_text(
