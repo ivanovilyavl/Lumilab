@@ -130,6 +130,10 @@ class Booking(Base):
     start_time = mapped_column(Time, nullable=False)
     end_time = mapped_column(Time, nullable=False)
 
+    # Client consent (set when booking is created via miniapp after consent screen)
+    client_consent_given: Mapped[bool] = mapped_column(Boolean, default=False)
+    client_consent_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
     # Status
     status: Mapped[str] = mapped_column(String(32), default="pending")
     cancel_reason: Mapped[str | None] = mapped_column(Text)

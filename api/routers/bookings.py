@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -95,6 +95,7 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
     else:
         client_pseudo = generate_pseudo()
 
+    now = datetime.utcnow()
     booking = Booking(
         master_id=data.master_id,
         service_id=data.service_id,
@@ -105,6 +106,8 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
         end_time=end_time,
         status="pending",
         source="miniapp",
+        client_consent_given=True,
+        client_consent_at=now,
     )
     db.add(booking)
 
