@@ -655,3 +655,25 @@ body {
 .clients-send-bar-actions .btn-primary-inline { padding: 10px 16px; font-size: 13px; }
 .msg-char-count { font-size: 11px; color: var(--tg-theme-hint-color); text-align: right; margin-top: 4px; margin-bottom: 8px; }
 .send-result { font-size: 15px; line-height: 2; }
+
+/* ── View toggle (clients page) ──────────────────────────────────────── */
+.clients-controls-row { display: flex; align-items: center; gap: 8px; }
+.clients-controls-row .clients-filter-tabs { flex: 1; }
+.clients-view-toggle { flex-shrink: 0; width: 32px; height: 32px; background: var(--tg-theme-secondary-bg-color); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; color: var(--tg-theme-hint-color); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.clients-view-toggle.active { background: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); border-color: transparent; }
+
+/* ── Clients table ───────────────────────────────────────────────────── */
+.clients-table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--tg-theme-secondary-bg-color); margin-bottom: 80px; }
+.clients-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 360px; }
+.clients-table thead { background: var(--tg-theme-secondary-bg-color); }
+.clients-table th { padding: 7px 8px; text-align: left; color: var(--tg-theme-hint-color); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; border-bottom: 1px solid rgba(0,0,0,0.06); }
+.clients-table td { padding: 7px 8px; border-bottom: 1px solid rgba(0,0,0,0.05); color: var(--tg-theme-text-color); vertical-align: middle; }
+.clients-table tbody tr:last-child td { border-bottom: none; }
+.clients-table .row-selected td { background: rgba(36,129,204,0.06); }
+.clients-table .row-inactive td { opacity: 0.55; }
+.clients-table .row-note-editor td { background: var(--tg-theme-secondary-bg-color); padding: 8px; }
+.clients-table td.td-num { text-align: center; font-weight: 600; }
+.clients-table td.td-date { white-space: nowrap; color: var(--tg-theme-hint-color); font-size: 12px; }
+.td-client-name { font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.td-note-dot { font-size: 12px; opacity: 0.7; }
+.td-services-mini { font-size: 11px; color: var(--tg-theme-hint-color); margin-top: 2px; }

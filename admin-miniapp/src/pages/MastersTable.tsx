@@ -6,6 +6,7 @@ interface Props {
 }
 
 type SubFilter = 'all' | 'trial' | 'active' | 'inactive';
+type ViewMode = 'cards' | 'table';
 
 const SUB_LABELS: Record<string, string> = {
   trial: 'Триал',
@@ -34,6 +35,7 @@ export default function MastersTable({ initData }: Props) {
   const { masters, loading, error } = useMasters(initData);
   const [filter, setFilter] = useState<SubFilter>('all');
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
   const filtered = useMemo(() => {
     let list = masters;
@@ -92,57 +94,108 @@ export default function MastersTable({ initData }: Props) {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {/* Filter tabs */}
-      <div className="filter-tabs">
-        {(['all', 'trial', 'active', 'inactive'] as SubFilter[]).map((t) => (
-          <button
-            key={t}
-            className={`filter-tab${filter === t ? ' active' : ''}`}
-            onClick={() => setFilter(t)}
-          >
-            {t === 'all' ? `Все (${masters.length})` :
-             t === 'trial' ? `Триал (${stats.trial})` :
-             t === 'active' ? `Платные (${stats.paying})` :
-             `Неактивные (${masters.length - stats.trial - stats.paying})`}
-          </button>
-        ))}
+      {/* Filter tabs + view toggle */}
+      <div className="filter-row">
+        <div className="filter-tabs">
+          {(['all', 'trial', 'active', 'inactive'] as SubFilter[]).map((t) => (
+            <button
+              key={t}
+              className={`filter-tab${filter === t ? ' active' : ''}`}
+              onClick={() => setFilter(t)}
+            >
+              {t === 'all' ? `Все (${masters.length})` :
+               t === 'trial' ? `Триал (${stats.trial})` :
+               t === 'active' ? `Платные (${stats.paying})` :
+               `Неакт. (${masters.length - stats.trial - stats.paying})`}
+            </button>
+          ))}
+        </div>
+        <button
+          className={`view-toggle${viewMode === 'table' ? ' active' : ''}`}
+          onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
+          title={viewMode === 'cards' ? 'Таблица' : 'Карточки'}
+        >
+          {viewMode === 'cards' ? '⊞' : '☰'}
+        </button>
       </div>
 
-      {/* List */}
-      <div className="admin-list">
-        {filtered.length === 0 && (
-          <div className="admin-empty">Нет мастеров по фильтру</div>
-        )}
-        {filtered.map((master) => (
-          <div key={master.id} className={`master-card${!master.is_active ? ' inactive' : ''}`}>
-            <div className="master-card-main">
-              <div className={`master-avatar${master.is_active ? '' : ' inactive'}`}>
-                {masterInitial(master.display_name, master.username)}
-              </div>
-              <div className="master-info">
-                <div className="master-name">
-                  <span className="master-username">@{master.username}</span>
-                  {master.display_name && (
-                    <span className="master-display-name">{master.display_name}</span>
-                  )}
-                  <span className={`badge ${SUB_CLASS[master.subscription_status] || 'badge-inactive'}`}>
-                    {SUB_LABELS[master.subscription_status] || master.subscription_status}
-                  </span>
-                  {!master.is_onboarded && (
-                    <span className="badge badge-pending">не онбордился</span>
-                  )}
+      {filtered.length === 0 && (
+        <div className="admin-empty">Нет мастеров по фильтру</div>
+      )}
+
+      {/* Cards view */}
+      {viewMode === 'cards' && (
+        <div className="admin-list">
+          {filtered.map((master) => (
+            <div key={master.id} className={`master-card${!master.is_active ? ' inactive' : ''}`}>
+              <div className="master-card-main">
+                <div className={`master-avatar${master.is_active ? '' : ' inactive'}`}>
+                  {masterInitial(master.display_name, master.username)}
                 </div>
-                <div className="master-meta">
-                  {master.niche && <span className="niche-chip">{master.niche}</span>}
-                  <span>📅 {master.total_bookings} записей</span>
-                  <span>👥 {master.total_clients} клиентов</span>
-                  <span className="master-date">с {formatDate(master.created_at)}</span>
+                <div className="master-info">
+                  <div className="master-name">
+                    <span className="master-username">@{master.username}</span>
+                    {master.display_name && (
+                      <span className="master-display-name">{master.display_name}</span>
+                    )}
+                    <span className={`badge ${SUB_CLASS[master.subscription_status] || 'badge-inactive'}`}>
+                      {SUB_LABELS[master.subscription_status] || master.subscription_status}
+                    </span>
+                    {!master.is_onboarded && (
+                      <span className="badge badge-pending">не онбордился</span>
+                    )}
+                  </div>
+                  <div className="master-meta">
+                    {master.niche && <span className="niche-chip">{master.niche}</span>}
+                    <span>📅 {master.total_bookings} записей</span>
+                    <span>👥 {master.total_clients} клиентов</span>
+                    <span className="master-date">с {formatDate(master.created_at)}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Table view */}
+      {viewMode === 'table' && (
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>@username</th>
+                <th>Имя</th>
+                <th>Ниша</th>
+                <th>Статус</th>
+                <th>Записей</th>
+                <th>Клиентов</th>
+                <th>С</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((master) => (
+                <tr key={master.id} className={!master.is_active ? 'row-inactive' : ''}>
+                  <td className="td-mono">@{master.username}</td>
+                  <td>{master.display_name || '—'}</td>
+                  <td>{master.niche || '—'}</td>
+                  <td>
+                    <span className={`badge ${SUB_CLASS[master.subscription_status] || 'badge-inactive'}`}>
+                      {SUB_LABELS[master.subscription_status] || master.subscription_status}
+                    </span>
+                    {!master.is_onboarded && (
+                      <span className="badge badge-pending" style={{ marginLeft: 4 }}>·</span>
+                    )}
+                  </td>
+                  <td className="td-num">{master.total_bookings}</td>
+                  <td className="td-num">{master.total_clients}</td>
+                  <td className="td-date">{formatDate(master.created_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

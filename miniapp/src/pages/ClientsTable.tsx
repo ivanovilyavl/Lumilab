@@ -8,6 +8,7 @@ interface Props {
 }
 
 type FilterTab = 'all' | 'active' | 'inactive';
+type ViewMode = 'cards' | 'table';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -24,6 +25,7 @@ export default function ClientsTable({ master, initData }: Props) {
 
   const [filter, setFilter] = useState<FilterTab>('all');
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState('');
@@ -129,17 +131,26 @@ export default function ClientsTable({ master, initData }: Props) {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {/* Filter tabs */}
-      <div className="clients-filter-tabs">
-        {(['all', 'active', 'inactive'] as FilterTab[]).map((t) => (
-          <button
-            key={t}
-            className={`clients-filter-tab${filter === t ? ' active' : ''}`}
-            onClick={() => setFilter(t)}
-          >
-            {t === 'all' ? 'Все' : t === 'active' ? '🟢 Активные' : '⚫ Неактивные'}
-          </button>
-        ))}
+      {/* Filter tabs + view toggle */}
+      <div className="clients-controls-row">
+        <div className="clients-filter-tabs">
+          {(['all', 'active', 'inactive'] as FilterTab[]).map((t) => (
+            <button
+              key={t}
+              className={`clients-filter-tab${filter === t ? ' active' : ''}`}
+              onClick={() => setFilter(t)}
+            >
+              {t === 'all' ? 'Все' : t === 'active' ? '🟢 Активные' : '⚫ Неактивные'}
+            </button>
+          ))}
+        </div>
+        <button
+          className={`clients-view-toggle${viewMode === 'table' ? ' active' : ''}`}
+          onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
+          title={viewMode === 'cards' ? 'Таблица' : 'Карточки'}
+        >
+          {viewMode === 'cards' ? '⊞' : '☰'}
+        </button>
       </div>
 
       {/* Select all row */}
@@ -158,110 +169,216 @@ export default function ClientsTable({ master, initData }: Props) {
         </div>
       )}
 
-      {/* Client cards */}
-      <div className="clients-list">
-        {filtered.length === 0 && (
-          <div className="no-slots">Нет клиентов по фильтру</div>
-        )}
-        {filtered.map((client) => (
-          <div
-            key={client.client_key}
-            className={`client-card${selected.has(client.client_key) ? ' selected' : ''}`}
-          >
-            {/* Main row */}
-            <div className="client-card-main">
-              <label className="client-checkbox-label" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={selected.has(client.client_key)}
-                  onChange={() => toggleSelect(client.client_key)}
-                />
-              </label>
+      {filtered.length === 0 && (
+        <div className="no-slots">Нет клиентов по фильтру</div>
+      )}
 
-              <div
-                className={`client-avatar${client.is_active ? ' active' : ' inactive'}`}
-              >
-                {clientInitial(client.pseudo)}
-              </div>
+      {/* Cards view */}
+      {viewMode === 'cards' && (
+        <div className="clients-list">
+          {filtered.map((client) => (
+            <div
+              key={client.client_key}
+              className={`client-card${selected.has(client.client_key) ? ' selected' : ''}`}
+            >
+              {/* Main row */}
+              <div className="client-card-main">
+                <label className="client-checkbox-label" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(client.client_key)}
+                    onChange={() => toggleSelect(client.client_key)}
+                  />
+                </label>
 
-              <div className="client-info">
-                <div className="client-name">
-                  {client.pseudo}
-                  <span className={`client-status-badge${client.is_active ? ' active' : ''}`}>
-                    {client.is_active ? 'активный' : 'неактивный'}
-                  </span>
+                <div className={`client-avatar${client.is_active ? ' active' : ' inactive'}`}>
+                  {clientInitial(client.pseudo)}
                 </div>
 
-                <div className="client-meta">
-                  <span title="Всего визитов">📅 {client.total_bookings}</span>
-                  {client.last_booking_date && (
-                    <span title="Последний визит">Был: {formatDate(client.last_booking_date)}</span>
-                  )}
-                  {client.next_booking_date && (
-                    <span title="Следующий визит" className="client-next">
-                      →&nbsp;{formatDate(client.next_booking_date)}
+                <div className="client-info">
+                  <div className="client-name">
+                    {client.pseudo}
+                    <span className={`client-status-badge${client.is_active ? ' active' : ''}`}>
+                      {client.is_active ? 'активный' : 'неактивный'}
                     </span>
+                  </div>
+
+                  <div className="client-meta">
+                    <span title="Всего визитов">📅 {client.total_bookings}</span>
+                    {client.last_booking_date && (
+                      <span title="Последний визит">Был: {formatDate(client.last_booking_date)}</span>
+                    )}
+                    {client.next_booking_date && (
+                      <span title="Следующий визит" className="client-next">
+                        →&nbsp;{formatDate(client.next_booking_date)}
+                      </span>
+                    )}
+                  </div>
+
+                  {client.services.length > 0 && (
+                    <div className="client-services">
+                      {client.services.map((s) => (
+                        <span key={s} className="client-service-chip">{s}</span>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                {client.services.length > 0 && (
-                  <div className="client-services">
-                    {client.services.map((s) => (
-                      <span key={s} className="client-service-chip">{s}</span>
-                    ))}
-                  </div>
-                )}
+                <button
+                  className="client-note-btn"
+                  title={client.note ? 'Редактировать комментарий' : 'Добавить комментарий'}
+                  onClick={() => startEditNote(client)}
+                >
+                  {client.note ? '📝' : '✏️'}
+                </button>
               </div>
 
-              <button
-                className="client-note-btn"
-                title={client.note ? 'Редактировать комментарий' : 'Добавить комментарий'}
-                onClick={() => startEditNote(client)}
-              >
-                {client.note ? '📝' : '✏️'}
-              </button>
-            </div>
-
-            {/* Note display */}
-            {client.note && editingKey !== client.client_key && (
-              <div className="client-note-text" onClick={() => startEditNote(client)}>
-                💬 {client.note}
-              </div>
-            )}
-
-            {/* Inline note editor */}
-            {editingKey === client.client_key && (
-              <div className="client-note-editor">
-                <textarea
-                  className="client-note-textarea"
-                  placeholder="Добавьте комментарий о клиенте..."
-                  value={editingNote}
-                  onChange={(e) => setEditingNote(e.target.value)}
-                  autoFocus
-                  rows={2}
-                  maxLength={500}
-                />
-                <div className="client-note-actions">
-                  <button
-                    className="btn-secondary"
-                    onClick={() => setEditingKey(null)}
-                    disabled={savingNote}
-                  >
-                    Отмена
-                  </button>
-                  <button
-                    className="btn-primary-inline"
-                    onClick={() => saveNote(client.client_key)}
-                    disabled={savingNote}
-                  >
-                    {savingNote ? 'Сохранение...' : 'Сохранить'}
-                  </button>
+              {/* Note display */}
+              {client.note && editingKey !== client.client_key && (
+                <div className="client-note-text" onClick={() => startEditNote(client)}>
+                  💬 {client.note}
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+              )}
+
+              {/* Inline note editor */}
+              {editingKey === client.client_key && (
+                <div className="client-note-editor">
+                  <textarea
+                    className="client-note-textarea"
+                    placeholder="Добавьте комментарий о клиенте..."
+                    value={editingNote}
+                    onChange={(e) => setEditingNote(e.target.value)}
+                    autoFocus
+                    rows={2}
+                    maxLength={500}
+                  />
+                  <div className="client-note-actions">
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setEditingKey(null)}
+                      disabled={savingNote}
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      className="btn-primary-inline"
+                      onClick={() => saveNote(client.client_key)}
+                      disabled={savingNote}
+                    >
+                      {savingNote ? 'Сохранение...' : 'Сохранить'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Table view */}
+      {viewMode === 'table' && (
+        <div className="clients-table-wrap">
+          <table className="clients-table">
+            <thead>
+              <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selected.size === filtered.length && filtered.length > 0}
+                    onChange={toggleAll}
+                  />
+                </th>
+                <th>Имя</th>
+                <th>Статус</th>
+                <th>Визитов</th>
+                <th>Был</th>
+                <th>Следующий</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((client) => (
+                <>
+                  <tr
+                    key={client.client_key}
+                    className={`${selected.has(client.client_key) ? 'row-selected' : ''}${!client.is_active ? ' row-inactive' : ''}`}
+                  >
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(client.client_key)}
+                        onChange={() => toggleSelect(client.client_key)}
+                      />
+                    </td>
+                    <td>
+                      <div className="td-client-name">
+                        {client.pseudo}
+                        {client.note && <span className="td-note-dot" title={client.note}>💬</span>}
+                      </div>
+                      {client.services.length > 0 && (
+                        <div className="td-services-mini">
+                          {client.services.slice(0, 2).join(', ')}
+                          {client.services.length > 2 && ` +${client.services.length - 2}`}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`client-status-badge${client.is_active ? ' active' : ''}`}>
+                        {client.is_active ? 'акт.' : 'неакт.'}
+                      </span>
+                    </td>
+                    <td className="td-num">{client.total_bookings}</td>
+                    <td className="td-date">{formatDate(client.last_booking_date)}</td>
+                    <td className="td-date">{formatDate(client.next_booking_date)}</td>
+                    <td>
+                      <button
+                        className="client-note-btn"
+                        title={client.note ? 'Редактировать комментарий' : 'Добавить комментарий'}
+                        onClick={() => editingKey === client.client_key ? setEditingKey(null) : startEditNote(client)}
+                      >
+                        {client.note ? '📝' : '✏️'}
+                      </button>
+                    </td>
+                  </tr>
+                  {editingKey === client.client_key && (
+                    <tr key={`${client.client_key}-note`} className="row-note-editor">
+                      <td colSpan={7}>
+                        <div className="client-note-editor">
+                          <textarea
+                            className="client-note-textarea"
+                            placeholder="Добавьте комментарий о клиенте..."
+                            value={editingNote}
+                            onChange={(e) => setEditingNote(e.target.value)}
+                            autoFocus
+                            rows={2}
+                            maxLength={500}
+                          />
+                          <div className="client-note-actions">
+                            <button
+                              className="btn-secondary"
+                              onClick={() => setEditingKey(null)}
+                              disabled={savingNote}
+                            >
+                              Отмена
+                            </button>
+                            <button
+                              className="btn-primary-inline"
+                              onClick={() => saveNote(client.client_key)}
+                              disabled={savingNote}
+                            >
+                              {savingNote ? 'Сохранение...' : 'Сохранить'}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Sticky send bar */}
       {selected.size > 0 && (
