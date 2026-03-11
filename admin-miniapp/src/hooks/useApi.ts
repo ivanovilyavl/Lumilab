@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { MasterItem, AdminClientItem } from '../types';
+import type { MasterItem, AdminClientItem, MessageResult } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-async function fetchJson<T>(url: string, initData: string): Promise<T> {
+async function fetchJson<T>(url: string, initData: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${url}`, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       'X-Telegram-Init-Data': initData,
@@ -57,4 +58,26 @@ export function useAdminClients(initData: string | null) {
   }, [initData, trigger]);
 
   return { clients, loading, error, refetch };
+}
+
+export async function sendAdminMastersMessage(
+  initData: string,
+  masterIds: number[],
+  text: string,
+): Promise<MessageResult> {
+  return fetchJson<MessageResult>('/api/admin/masters/message', initData, {
+    method: 'POST',
+    body: JSON.stringify({ master_ids: masterIds, text }),
+  });
+}
+
+export async function sendAdminClientsMessage(
+  initData: string,
+  tgHashes: string[],
+  text: string,
+): Promise<MessageResult> {
+  return fetchJson<MessageResult>('/api/admin/clients/message', initData, {
+    method: 'POST',
+    body: JSON.stringify({ tg_hashes: tgHashes, text }),
+  });
 }

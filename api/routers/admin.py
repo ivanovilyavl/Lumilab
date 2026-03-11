@@ -45,6 +45,7 @@ class MasterItem(BaseModel):
     subscription_status: str
     is_active: bool
     is_onboarded: bool
+    consent_given: bool
     created_at: str
     total_bookings: int
     total_clients: int
@@ -54,10 +55,27 @@ class AdminClientItem(BaseModel):
     tg_hash: str | None
     pseudo: str
     is_manual: bool
+    client_consent_given: bool
     total_bookings: int
     masters_count: int
     last_booking_date: str | None
     services: list[str]
+
+
+class AdminMastersMessageRequest(BaseModel):
+    master_ids: list[int]
+    text: str
+
+
+class AdminClientsMessageRequest(BaseModel):
+    tg_hashes: list[str]
+    text: str
+
+
+class MessageResult(BaseModel):
+    sent: int
+    failed: int
+    no_contact: int
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -111,6 +129,7 @@ async def list_masters(
             subscription_status=m.subscription_status,
             is_active=m.is_active,
             is_onboarded=m.is_onboarded,
+            consent_given=m.consent_given,
             created_at=m.created_at.strftime("%Y-%m-%d"),
             total_bookings=bookings_by_master.get(m.id, 0),
             total_clients=clients_by_master.get(m.id, 0),
@@ -148,10 +167,13 @@ async def list_all_clients(
                 "dates": [],
                 "services": set(),
                 "master_ids": set(),
+                "client_consent_given": False,
             }
         aggregated[key]["dates"].append(booking.booking_date)
         aggregated[key]["services"].add(service.name)
         aggregated[key]["master_ids"].add(booking.master_id)
+        if booking.client_consent_given:
+            aggregated[key]["client_consent_given"] = True
 
     result: list[AdminClientItem] = []
     for _key, data in aggregated.items():
@@ -163,6 +185,7 @@ async def list_all_clients(
                 tg_hash=data["tg_hash"],
                 pseudo=data["pseudo"],
                 is_manual=data["is_manual"],
+                client_consent_given=data["client_consent_given"],
                 total_bookings=len(all_dates),
                 masters_count=len(data["master_ids"]),
                 last_booking_date=str(last_date) if last_date else None,
@@ -172,3 +195,92 @@ async def list_all_clients(
 
     result.sort(key=lambda c: c.last_booking_date or "0000-00-00", reverse=True)
     return result
+
+
+@router.post("/masters/message", response_model=MessageResult)
+async def send_message_to_masters(
+    data: AdminMastersMessageRequest,
+    db: AsyncSession = Depends(get_db),
+    x_telegram_init_data: str | None = Header(default=None),
+):
+    _require_admin(x_telegram_init_data)
+
+    text = data.text.strip()
+    if not text:
+        raise HTTPException(400, "Message text is empty")
+    if len(text) > 2000:
+        raise HTTPException(400, "Message too long (max 2000 characters)")
+
+    # Only send to masters who gave consent
+    result = await db.execute(
+        select(Master).where(
+            Master.id.in_(data.master_ids),
+            Master.consent_given == True,
+        )
+    )
+    masters = result.scalars().all()
+
+    from aiogram import Bot
+    from aiogram.client.default import DefaultBotProperties
+    from aiogram.enums import ParseMode
+
+    bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    sent = failed = no_contact = 0
+    try:
+        for master in masters:
+            try:
+                await bot.send_message(
+                    master.telegram_id,
+                    f"📢 <b>Сообщение от команды Plotina bot:</b>\n\n{text}",
+                )
+                sent += 1
+            except Exception:
+                failed += 1
+        # Masters in request that had no consent counted as no_contact
+        no_contact = len(data.master_ids) - len(masters)
+    finally:
+        await bot.session.close()
+
+    return MessageResult(sent=sent, failed=failed, no_contact=no_contact)
+
+
+@router.post("/clients/message", response_model=MessageResult)
+async def send_message_to_clients(
+    data: AdminClientsMessageRequest,
+    x_telegram_init_data: str | None = Header(default=None),
+):
+    _require_admin(x_telegram_init_data)
+
+    text = data.text.strip()
+    if not text:
+        raise HTTPException(400, "Message text is empty")
+    if len(text) > 2000:
+        raise HTTPException(400, "Message too long (max 2000 characters)")
+
+    from aiogram import Bot
+    from aiogram.client.default import DefaultBotProperties
+    from aiogram.enums import ParseMode
+    from redis.asyncio import from_url as redis_from_url
+
+    bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    redis = redis_from_url(settings.redis_url)
+    sent = failed = no_contact = 0
+    try:
+        for tg_hash in data.tg_hashes:
+            tg_id_bytes = await redis.get(f"tghash:{tg_hash}")
+            if not tg_id_bytes:
+                failed += 1
+                continue
+            try:
+                await bot.send_message(
+                    int(tg_id_bytes),
+                    f"📢 <b>Сообщение от команды Plotina bot:</b>\n\n{text}",
+                )
+                sent += 1
+            except Exception:
+                failed += 1
+    finally:
+        await redis.aclose()
+        await bot.session.close()
+
+    return MessageResult(sent=sent, failed=failed, no_contact=no_contact)

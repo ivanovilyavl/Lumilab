@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useAdminClients } from '../hooks/useApi';
+import { useAdminClients, sendAdminClientsMessage } from '../hooks/useApi';
+import type { MessageResult } from '../types';
 
 interface Props {
   initData: string;
@@ -27,6 +28,11 @@ export default function ClientsTable({ initData }: Props) {
   const [search, setSearch] = useState('');
   const [showManual, setShowManual] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showMsg, setShowMsg] = useState(false);
+  const [msgText, setMsgText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<MessageResult | null>(null);
 
   const filtered = useMemo(() => {
     let list = clients;
@@ -45,11 +51,93 @@ export default function ClientsTable({ initData }: Props) {
     totalBookings: clients.reduce((s, c) => s + c.total_bookings, 0),
   }), [clients]);
 
+  function toggleSelect(tgHash: string, hasConsent: boolean) {
+    if (!hasConsent) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(tgHash)) next.delete(tgHash); else next.add(tgHash);
+      return next;
+    });
+  }
+
+  function selectAllConsented() {
+    const all = filtered.filter((c) => c.client_consent_given && c.tg_hash).map((c) => c.tg_hash!);
+    if (selected.size === all.length && all.every((h) => selected.has(h))) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(all));
+    }
+  }
+
+  async function handleSend() {
+    if (!msgText.trim() || selected.size === 0) return;
+    setSending(true);
+    setSendResult(null);
+    try {
+      const result = await sendAdminClientsMessage(initData, Array.from(selected), msgText.trim());
+      setSendResult(result);
+      setMsgText('');
+    } catch {
+      setSendResult({ sent: 0, failed: selected.size, no_contact: 0 });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const consentedCount = useMemo(
+    () => filtered.filter((c) => c.client_consent_given && c.tg_hash).length,
+    [filtered],
+  );
+
   if (loading) return <div className="admin-loading">Загрузка клиентов...</div>;
   if (error) return <div className="admin-error">{error}</div>;
 
   return (
     <div className="admin-page">
+      {/* Send bar */}
+      {selected.size > 0 && (
+        <div className="admin-send-bar">
+          {!showMsg ? (
+            <>
+              <span className="send-bar-count">Выбрано: {selected.size}</span>
+              <button className="send-bar-btn" onClick={() => { setShowMsg(true); setSendResult(null); }}>
+                ✉️ Написать
+              </button>
+              <button className="send-bar-clear" onClick={() => setSelected(new Set())}>✕</button>
+            </>
+          ) : (
+            <div className="send-bar-compose">
+              <textarea
+                className="send-bar-textarea"
+                placeholder="Текст сообщения..."
+                value={msgText}
+                onChange={(e) => setMsgText(e.target.value)}
+                maxLength={2000}
+                rows={3}
+              />
+              {sendResult && (
+                <div className="send-bar-result">
+                  ✅ Отправлено: {sendResult.sent} · ❌ Ошибок: {sendResult.failed}
+                  {sendResult.no_contact > 0 && ` · 🚫 Нет в Redis: ${sendResult.no_contact}`}
+                </div>
+              )}
+              <div className="send-bar-actions">
+                <button className="send-bar-cancel" onClick={() => { setShowMsg(false); setMsgText(''); setSendResult(null); }}>
+                  Отмена
+                </button>
+                <button
+                  className="send-bar-send"
+                  onClick={handleSend}
+                  disabled={sending || !msgText.trim()}
+                >
+                  {sending ? 'Отправка...' : `Отправить (${selected.size})`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="stats-row">
         <div className="stat-card">
@@ -108,11 +196,30 @@ export default function ClientsTable({ initData }: Props) {
         <div className="admin-empty">Нет клиентов по фильтру</div>
       )}
 
+      {consentedCount > 0 && (
+        <button className="select-all-btn" onClick={selectAllConsented}>
+          {selected.size === consentedCount ? 'Снять выделение' : `Выбрать всех с согласием (${consentedCount})`}
+        </button>
+      )}
+
       {/* Cards view */}
       {viewMode === 'cards' && (
         <div className="admin-list">
           {filtered.map((client) => (
-            <div key={client.tg_hash || `manual:${client.pseudo}`} className="client-card-admin">
+            <div
+              key={client.tg_hash || `manual:${client.pseudo}`}
+              className={`client-card-admin${client.tg_hash && client.client_consent_given && selected.has(client.tg_hash) ? ' selected' : ''}`}
+              onClick={() => client.tg_hash && toggleSelect(client.tg_hash, client.client_consent_given)}
+            >
+              {client.client_consent_given && client.tg_hash && (
+                <input
+                  type="checkbox"
+                  className="admin-card-checkbox"
+                  checked={selected.has(client.tg_hash)}
+                  onChange={() => toggleSelect(client.tg_hash!, client.client_consent_given)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
               <div className={`client-avatar-admin${client.is_manual ? ' manual' : ''}`}>
                 {clientInitial(client.pseudo)}
               </div>
@@ -121,6 +228,9 @@ export default function ClientsTable({ initData }: Props) {
                   {client.pseudo}
                   {client.is_manual && (
                     <span className="badge badge-manual">ручная запись</span>
+                  )}
+                  {!client.client_consent_given && client.tg_hash && (
+                    <span className="badge badge-no-consent">нет согласия</span>
                   )}
                 </div>
                 <div className="client-meta-admin">
@@ -156,6 +266,7 @@ export default function ClientsTable({ initData }: Props) {
           <table className="data-table">
             <thead>
               <tr>
+                <th></th>
                 <th>Клиент</th>
                 <th>Тип</th>
                 <th>Записей</th>
@@ -166,7 +277,20 @@ export default function ClientsTable({ initData }: Props) {
             </thead>
             <tbody>
               {filtered.map((client) => (
-                <tr key={client.tg_hash || `manual:${client.pseudo}`}>
+                <tr
+                  key={client.tg_hash || `manual:${client.pseudo}`}
+                  className={client.tg_hash && selected.has(client.tg_hash) ? 'row-selected' : ''}
+                  onClick={() => client.tg_hash && toggleSelect(client.tg_hash, client.client_consent_given)}
+                >
+                  <td onClick={(e) => e.stopPropagation()}>
+                    {client.client_consent_given && client.tg_hash && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(client.tg_hash)}
+                        onChange={() => toggleSelect(client.tg_hash!, client.client_consent_given)}
+                      />
+                    )}
+                  </td>
                   <td>
                     <div className="td-client">
                       <span>{client.pseudo}</span>
@@ -181,6 +305,9 @@ export default function ClientsTable({ initData }: Props) {
                     {client.is_manual
                       ? <span className="badge badge-manual">ручная</span>
                       : <span className="badge badge-active">TG</span>}
+                    {!client.client_consent_given && client.tg_hash && (
+                      <span className="badge badge-no-consent" style={{ marginLeft: 4 }}>нет согл.</span>
+                    )}
                   </td>
                   <td className="td-num">{client.total_bookings}</td>
                   <td className="td-num">{client.masters_count}</td>

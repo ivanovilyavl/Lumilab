@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useMasters } from '../hooks/useApi';
+import { useMasters, sendAdminMastersMessage } from '../hooks/useApi';
+import type { MessageResult } from '../types';
 
 interface Props {
   initData: string;
@@ -36,6 +37,11 @@ export default function MastersTable({ initData }: Props) {
   const [filter, setFilter] = useState<SubFilter>('all');
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showMsg, setShowMsg] = useState(false);
+  const [msgText, setMsgText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<MessageResult | null>(null);
 
   const filtered = useMemo(() => {
     let list = masters;
@@ -61,11 +67,90 @@ export default function MastersTable({ initData }: Props) {
     onboarded: masters.filter((m) => m.is_onboarded).length,
   }), [masters]);
 
+  function toggleSelect(id: number, hasConsent: boolean) {
+    if (!hasConsent) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllConsented() {
+    const allConsented = filtered.filter((m) => m.consent_given).map((m) => m.id);
+    if (selected.size === allConsented.length && allConsented.every((id) => selected.has(id))) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(allConsented));
+    }
+  }
+
+  async function handleSend() {
+    if (!msgText.trim() || selected.size === 0) return;
+    setSending(true);
+    setSendResult(null);
+    try {
+      const result = await sendAdminMastersMessage(initData, Array.from(selected), msgText.trim());
+      setSendResult(result);
+      setMsgText('');
+    } catch {
+      setSendResult({ sent: 0, failed: selected.size, no_contact: 0 });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  const consentedCount = useMemo(() => filtered.filter((m) => m.consent_given).length, [filtered]);
+
   if (loading) return <div className="admin-loading">Загрузка мастеров...</div>;
   if (error) return <div className="admin-error">{error}</div>;
 
   return (
     <div className="admin-page">
+      {/* Send bar */}
+      {selected.size > 0 && (
+        <div className="admin-send-bar">
+          {!showMsg ? (
+            <>
+              <span className="send-bar-count">Выбрано: {selected.size}</span>
+              <button className="send-bar-btn" onClick={() => { setShowMsg(true); setSendResult(null); }}>
+                ✉️ Написать
+              </button>
+              <button className="send-bar-clear" onClick={() => setSelected(new Set())}>✕</button>
+            </>
+          ) : (
+            <div className="send-bar-compose">
+              <textarea
+                className="send-bar-textarea"
+                placeholder="Текст сообщения..."
+                value={msgText}
+                onChange={(e) => setMsgText(e.target.value)}
+                maxLength={2000}
+                rows={3}
+              />
+              {sendResult && (
+                <div className="send-bar-result">
+                  ✅ Отправлено: {sendResult.sent} · ❌ Ошибок: {sendResult.failed}
+                  {sendResult.no_contact > 0 && ` · 🚫 Без согласия: ${sendResult.no_contact}`}
+                </div>
+              )}
+              <div className="send-bar-actions">
+                <button className="send-bar-cancel" onClick={() => { setShowMsg(false); setMsgText(''); setSendResult(null); }}>
+                  Отмена
+                </button>
+                <button
+                  className="send-bar-send"
+                  onClick={handleSend}
+                  disabled={sending || !msgText.trim()}
+                >
+                  {sending ? 'Отправка...' : `Отправить (${selected.size})`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stats */}
       <div className="stats-row">
         <div className="stat-card">
@@ -120,6 +205,12 @@ export default function MastersTable({ initData }: Props) {
         </button>
       </div>
 
+      {consentedCount > 0 && (
+        <button className="select-all-btn" onClick={selectAllConsented}>
+          {selected.size === consentedCount ? 'Снять выделение' : `Выбрать всех с согласием (${consentedCount})`}
+        </button>
+      )}
+
       {filtered.length === 0 && (
         <div className="admin-empty">Нет мастеров по фильтру</div>
       )}
@@ -128,7 +219,20 @@ export default function MastersTable({ initData }: Props) {
       {viewMode === 'cards' && (
         <div className="admin-list">
           {filtered.map((master) => (
-            <div key={master.id} className={`master-card${!master.is_active ? ' inactive' : ''}`}>
+            <div
+              key={master.id}
+              className={`master-card${!master.is_active ? ' inactive' : ''}${selected.has(master.id) ? ' selected' : ''}`}
+              onClick={() => toggleSelect(master.id, master.consent_given)}
+            >
+              {master.consent_given && (
+                <input
+                  type="checkbox"
+                  className="admin-card-checkbox"
+                  checked={selected.has(master.id)}
+                  onChange={() => toggleSelect(master.id, master.consent_given)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
               <div className="master-card-main">
                 <div className={`master-avatar${master.is_active ? '' : ' inactive'}`}>
                   {masterInitial(master.display_name, master.username)}
@@ -144,6 +248,9 @@ export default function MastersTable({ initData }: Props) {
                     </span>
                     {!master.is_onboarded && (
                       <span className="badge badge-pending">не онбордился</span>
+                    )}
+                    {!master.consent_given && (
+                      <span className="badge badge-no-consent">нет согласия</span>
                     )}
                   </div>
                   <div className="master-meta">
@@ -165,6 +272,7 @@ export default function MastersTable({ initData }: Props) {
           <table className="data-table">
             <thead>
               <tr>
+                <th></th>
                 <th>@username</th>
                 <th>Имя</th>
                 <th>Ниша</th>
@@ -176,7 +284,20 @@ export default function MastersTable({ initData }: Props) {
             </thead>
             <tbody>
               {filtered.map((master) => (
-                <tr key={master.id} className={!master.is_active ? 'row-inactive' : ''}>
+                <tr
+                  key={master.id}
+                  className={`${!master.is_active ? 'row-inactive' : ''}${selected.has(master.id) ? ' row-selected' : ''}`}
+                  onClick={() => toggleSelect(master.id, master.consent_given)}
+                >
+                  <td onClick={(e) => e.stopPropagation()}>
+                    {master.consent_given && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(master.id)}
+                        onChange={() => toggleSelect(master.id, master.consent_given)}
+                      />
+                    )}
+                  </td>
                   <td className="td-mono">@{master.username}</td>
                   <td>{master.display_name || '—'}</td>
                   <td>{master.niche || '—'}</td>
@@ -186,6 +307,9 @@ export default function MastersTable({ initData }: Props) {
                     </span>
                     {!master.is_onboarded && (
                       <span className="badge badge-pending" style={{ marginLeft: 4 }}>·</span>
+                    )}
+                    {!master.consent_given && (
+                      <span className="badge badge-no-consent" style={{ marginLeft: 4 }}>нет согл.</span>
                     )}
                   </td>
                   <td className="td-num">{master.total_bookings}</td>

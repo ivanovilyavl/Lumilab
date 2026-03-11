@@ -549,3 +549,202 @@ body {
   flex-direction: column;
   gap: 2px;
 }
+
+/* ── Send bar ─────────────────────────────────────────────────────────── */
+
+.admin-send-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(124, 106, 247, 0.2);
+}
+
+.send-bar-count {
+  flex: 1;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.send-bar-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.send-bar-btn:hover {
+  opacity: 0.85;
+}
+
+.send-bar-clear {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.send-bar-clear:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.send-bar-compose {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.send-bar-textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.4;
+  transition: border-color 0.15s;
+}
+
+.send-bar-textarea:focus {
+  border-color: var(--accent);
+}
+
+.send-bar-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.send-bar-result {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 4px 0;
+}
+
+.send-bar-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.send-bar-cancel {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.send-bar-cancel:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.send-bar-send {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.send-bar-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.send-bar-send:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+/* ── Select all button ────────────────────────────────────────────────── */
+
+.select-all-btn {
+  width: 100%;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.select-all-btn:hover {
+  background: rgba(124, 106, 247, 0.25);
+}
+
+/* ── Card checkbox ────────────────────────────────────────────────────── */
+
+.admin-card-checkbox {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.master-card,
+.client-card-admin {
+  position: relative;
+}
+
+.master-card.selected {
+  border-color: var(--accent);
+  background: rgba(124, 106, 247, 0.08);
+}
+
+.client-card-admin.selected {
+  border-color: var(--accent);
+  background: rgba(124, 106, 247, 0.08);
+}
+
+/* ── Table row selected ───────────────────────────────────────────────── */
+
+.data-table tbody tr.row-selected td {
+  background: rgba(124, 106, 247, 0.08);
+}
+
+/* ── No consent badge ─────────────────────────────────────────────────── */
+
+.badge-no-consent {
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--red);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
