@@ -6,12 +6,14 @@ from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
-from aiogram.types import Message, TelegramObject
+from aiogram.types import ErrorEvent, Message, TelegramObject
 
 from analytics_bot.handlers import (
     bookings_stats,
     cohorts,
+    counts,
     export,
+    feedback,
     funnels,
     master_info,
     niches,
@@ -21,6 +23,7 @@ from analytics_bot.handlers import (
     users,
 )
 from db.session import async_session
+from shared.analytics import send_alert
 from shared.config import settings
 
 logging.basicConfig(level=getattr(logging, settings.log_level))
@@ -77,6 +80,28 @@ async def main():
     dp.include_router(bookings_stats.router)
     dp.include_router(master_info.router)
     dp.include_router(export.router)
+    dp.include_router(counts.router)
+    dp.include_router(feedback.router)  # must be last — catches all reply messages
+
+    # Error handler — logs and notifies admins via this bot itself
+    @dp.error()
+    async def error_handler(event: ErrorEvent) -> None:
+        exc = event.exception
+        logger.exception(f"Unhandled exception in analytics bot handler: {exc}")
+        for admin_id in settings.admin_ids:
+            try:
+                await bot.send_message(
+                    admin_id,
+                    f"🔴 <b>Ошибка в аналитик-боте</b>\n\n"
+                    f"<code>{type(exc).__name__}: {exc}</code>",
+                )
+            except Exception:
+                pass
+
+    # Shutdown notification — send via main bot so admins are notified even if analytics bot dies
+    @dp.shutdown()
+    async def on_shutdown(**kwargs) -> None:
+        await send_alert("🛑 <b>Аналитик-бот остановлен</b>")
 
     logger.info("Analytics bot starting...")
     await dp.start_polling(bot)

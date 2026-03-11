@@ -5,14 +5,15 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
-from aiogram.types import MenuButtonWebApp, WebAppInfo
+from aiogram.types import ErrorEvent, MenuButtonWebApp, WebAppInfo
 from sqlalchemy import select
 
-from bot.handlers import start, profile, services, schedule, bookings, subscription, referral, mylink, help, qa
+from bot.handlers import start, profile, services, schedule, bookings, subscription, referral, mylink, help, qa, feedback
 from bot.middlewares.auth import AuthMiddleware
 from bot.middlewares.subscription import SubscriptionMiddleware
 from db.models import Master
 from db.session import async_session
+from shared.analytics import send_alert
 from shared.config import settings
 
 logging.basicConfig(level=getattr(logging, settings.log_level))
@@ -64,6 +65,22 @@ async def main():
     dp.include_router(mylink.router)
     dp.include_router(help.router)
     dp.include_router(qa.router)
+    dp.include_router(feedback.router)
+
+    # Error handler — forwards unhandled exceptions to analytics bot
+    @dp.error()
+    async def error_handler(event: ErrorEvent) -> None:
+        exc = event.exception
+        logger.exception(f"Unhandled exception in bot handler: {exc}")
+        await send_alert(
+            f"🔴 <b>Ошибка в боте</b>\n\n"
+            f"<code>{type(exc).__name__}: {exc}</code>"
+        )
+
+    # Shutdown notification
+    @dp.shutdown()
+    async def on_shutdown(**kwargs) -> None:
+        await send_alert("🛑 <b>Основной бот остановлен</b>")
 
     # Set default Web App menu button (fallback for non-masters / unregistered users)
     await bot.set_chat_menu_button(
