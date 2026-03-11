@@ -129,12 +129,13 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
         from bot.keyboards.common import booking_notification_kb
 
         bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+        price_str = f"{service.price} ₽" if service.price is not None else "по договорённости"
 
         await bot.send_message(
             master.telegram_id,
             f"📅 Новая запись!\n\n"
             f"👤 {client_pseudo}\n"
-            f"💅 {service.name} · {service.duration_min} мин · {service.price} ₽\n"
+            f"💅 {service.name} · {service.duration_min} мин · {price_str}\n"
             f"📆 {booking_date.strftime('%d.%m.%Y')} в {start_time.strftime('%H:%M')}",
             reply_markup=booking_notification_kb(booking.id),
         )
@@ -144,7 +145,7 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
                 data.client_telegram_id,
                 f"📋 <b>Заявка принята!</b>\n\n"
                 f"👤 {master.display_name or 'Мастер'}\n"
-                f"💅 {service.name} · {service.duration_min} мин · {service.price} ₽\n"
+                f"💅 {service.name} · {service.duration_min} мин · {price_str}\n"
                 f"📆 {booking_date.strftime('%d.%m.%Y')} в {start_time.strftime('%H:%M')}\n\n"
                 f"⏳ Ожидайте подтверждения от мастера.",
             )

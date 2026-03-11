@@ -170,7 +170,7 @@ export default function MasterCalendar({ bookings, master, initData, onBookingCr
                 >
                   {master.services.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} · {s.duration_min} мин · {s.price} ₽
+                      {s.name} · {s.duration_min} мин{s.price !== null ? ` · ${s.price} ₽` : ' · по договорённости'}
                     </option>
                   ))}
                 </select>

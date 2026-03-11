@@ -17,7 +17,7 @@ class ServiceOut(BaseModel):
     id: int
     name: str
     description: str | None
-    price: int
+    price: int | None
     duration_min: int
 
     model_config = {"from_attributes": True}

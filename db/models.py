@@ -73,7 +73,7 @@ class Service(Base):
     master_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("masters.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    price: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_min: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)

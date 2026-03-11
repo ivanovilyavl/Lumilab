@@ -74,8 +74,9 @@ async def _send_reminder_24h():
                         client_tg_id,
                         f"⏰ Напоминание о записи\n\n"
                         f"👤 {b.master.display_name or 'Мастер'}\n"
-                        f"💅 {b.service.name} · {b.service.duration_min} мин · {b.service.price} ₽\n"
-                        f"📆 Завтра в {b.start_time.strftime('%H:%M')}",
+                        f"💅 {b.service.name} · {b.service.duration_min} мин"
+                        + (f" · {b.service.price} ₽" if b.service.price is not None else " · по договорённости")
+                        + f"\n📆 Завтра в {b.start_time.strftime('%H:%M')}",
                         reply_markup=client_cancel_kb(b.id),
                     )
                     sent += 1

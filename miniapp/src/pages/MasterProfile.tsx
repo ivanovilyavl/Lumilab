@@ -40,7 +40,7 @@ export default function MasterProfile({ master }: Props) {
           <div className="service-name">{service.name}</div>
           <div className="service-meta">
             <span>{service.duration_min} мин</span>
-            <span className="service-price">{service.price} ₽</span>
+            <span className="service-price">{service.price !== null ? `${service.price} ₽` : 'по договорённости'}</span>
           </div>
           {service.description && (
             <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 4 }}>

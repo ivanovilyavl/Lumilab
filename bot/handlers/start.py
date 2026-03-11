@@ -8,6 +8,7 @@ from aiogram.types import Message, CallbackQuery, MenuButtonWebApp, WebAppInfo, 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.handlers.services import fmt_price, price_ask_kb
 from bot.keyboards.common import niche_kb, schedule_days_kb, slot_step_kb, main_menu_kb
 from bot.states.onboarding import OnboardingStates
 from db.models import Master, Service, ScheduleTemplate, ScheduleOverride, Event, Referral
@@ -185,7 +186,11 @@ async def process_service_name(message: Message, state: FSMContext):
         await message.answer("Название услуги — от 1 до 128 символов. Попробуйте ещё раз:")
         return
     await state.update_data(service_name=name)
-    await message.answer(f"Услуга: <b>{name}</b>\n\nУкажите <b>цену в рублях</b> (только число):")
+    await message.answer(
+        f"Услуга: <b>{name}</b>\n\n"
+        "Укажите <b>цену в рублях</b> или пропустите, если цена индивидуальная:",
+        reply_markup=price_ask_kb(),
+    )
     await state.set_state(OnboardingStates.SERVICE_PRICE)
 
 
@@ -196,7 +201,7 @@ async def process_service_price(message: Message, state: FSMContext):
         if price < 0 or price > 1_000_000:
             raise ValueError
     except ValueError:
-        await message.answer("Введите цену числом от 0 до 1 000 000:")
+        await message.answer("Введите цену числом от 0 до 1 000 000:", reply_markup=price_ask_kb())
         return
     await state.update_data(service_price=price)
     await message.answer(
@@ -205,6 +210,18 @@ async def process_service_price(message: Message, state: FSMContext):
         "(например: 30, 60, 90)"
     )
     await state.set_state(OnboardingStates.SERVICE_DURATION)
+
+
+@router.callback_query(OnboardingStates.SERVICE_PRICE, F.data == "skip_price")
+async def process_service_price_skip(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(service_price=None)
+    await callback.message.edit_text(
+        "Цена: <b>по договорённости</b>\n\n"
+        "Укажите <b>длительность в минутах</b> (только число):\n"
+        "(например: 30, 60, 90)"
+    )
+    await state.set_state(OnboardingStates.SERVICE_DURATION)
+    await callback.answer()
 
 
 @router.message(OnboardingStates.SERVICE_DURATION)
@@ -354,7 +371,7 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
     service = Service(
         master_id=master.id,
         name=data["service_name"],
-        price=data["service_price"],
+        price=data.get("service_price"),
         duration_min=data["service_duration"],
     )
     db.add(service)
@@ -423,12 +440,15 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
     # Send main menu
     await callback.message.answer("Вот ваше главное меню:", reply_markup=main_menu_kb())
 
-    # Feedback block
+    # Feedback block + referral nudge
     await callback.message.answer(
         "💬 <b>Нам очень важна ваша обратная связь!</b>\n\n"
         "Если что-то не работает или нужен дополнительный функционал "
         "для вашей работы — напишите нам прямо в этот бот.\n\n"
-        "Мы читаем каждое сообщение и активно развиваем продукт 🙏"
+        "Мы читаем каждое сообщение и активно развиваем продукт 🙏\n\n"
+        "— — —\n"
+        "Если среди ваших коллег есть те, кому это тоже может помочь — "
+        "поделитесь ботом @plotinahelperbot. Будем рады 🤝"
     )
 
 

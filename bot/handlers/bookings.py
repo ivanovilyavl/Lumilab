@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from bot.handlers.services import fmt_price
 from bot.keyboards.common import (
     booking_tabs_kb,
     client_cancel_confirm_kb,
@@ -198,7 +199,7 @@ async def bk_confirm(callback: CallbackQuery, db: AsyncSession, master: Master):
     await callback.answer("✅ Запись подтверждена!")
 
     service_line = (
-        f"💅 {service.name} · {service.duration_min} мин · {service.price} ₽\n"
+        f"💅 {service.name} · {service.duration_min} мин · {fmt_price(service.price)}\n"
         if service else ""
     )
     await _notify_client(

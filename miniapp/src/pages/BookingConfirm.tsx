@@ -88,7 +88,7 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
         </div>
         <div className="summary-row">
           <span className="summary-label">Стоимость</span>
-          <span className="summary-value">{service.price} ₽</span>
+          <span className="summary-value">{service.price !== null ? `${service.price} ₽` : 'по договорённости'}</span>
         </div>
         <div className="summary-row">
           <span className="summary-label">Ваше имя</span>

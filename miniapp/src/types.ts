@@ -2,7 +2,7 @@ export interface ServiceType {
   id: number;
   name: string;
   description: string | null;
-  price: number;
+  price: number | null;
   duration_min: number;
 }
 

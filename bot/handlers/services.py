@@ -12,13 +12,23 @@ from shared.config import settings
 router = Router()
 
 
+def fmt_price(price: int | None) -> str:
+    return f"{price} ₽" if price is not None else "по договорённости"
+
+
+def price_ask_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Пропустить (цена по договорённости)", callback_data="skip_price"),
+    ]])
+
+
 def services_list_kb(services: list[Service]) -> InlineKeyboardMarkup:
     buttons = []
     for s in services:
         status = "✅" if s.is_active else "🙈"
         buttons.append([
             InlineKeyboardButton(
-                text=f"{status} {s.name} — {s.price} ₽ ({s.duration_min} мин)",
+                text=f"{status} {s.name} — {fmt_price(s.price)} ({s.duration_min} мин)",
                 callback_data=f"svc_view:{s.id}",
             )
         ])
@@ -81,7 +91,7 @@ async def svc_view(callback: CallbackQuery, db: AsyncSession):
         return
     text = (
         f"📋 <b>{service.name}</b>\n\n"
-        f"💰 Цена: {service.price} ₽\n"
+        f"💰 Цена: {fmt_price(service.price)}\n"
         f"⏱ Длительность: {service.duration_min} мин\n"
         f"📝 Описание: {service.description or '—'}\n"
         f"Статус: {'✅ Активна' if service.is_active else '🙈 Скрыта'}"
@@ -104,7 +114,7 @@ async def svc_toggle(callback: CallbackQuery, db: AsyncSession):
     # Refresh view
     text = (
         f"📋 <b>{service.name}</b>\n\n"
-        f"💰 Цена: {service.price} ₽\n"
+        f"💰 Цена: {fmt_price(service.price)}\n"
         f"⏱ Длительность: {service.duration_min} мин\n"
         f"Статус: {'✅ Активна' if service.is_active else '🙈 Скрыта'}"
     )
@@ -153,7 +163,11 @@ async def add_svc_name(message: Message, state: FSMContext):
         await message.answer("Название — от 1 до 128 символов:")
         return
     await state.update_data(name=name)
-    await message.answer(f"Услуга: <b>{name}</b>\n\nУкажите <b>цену в рублях</b>:")
+    await message.answer(
+        f"Услуга: <b>{name}</b>\n\n"
+        "Укажите <b>цену в рублях</b> или пропустите, если цена индивидуальная:",
+        reply_markup=price_ask_kb(),
+    )
     await state.set_state(AddServiceStates.PRICE)
 
 
@@ -164,11 +178,19 @@ async def add_svc_price(message: Message, state: FSMContext):
         if price < 0 or price > 1_000_000:
             raise ValueError
     except ValueError:
-        await message.answer("Введите цену числом от 0 до 1 000 000:")
+        await message.answer("Введите цену числом от 0 до 1 000 000:", reply_markup=price_ask_kb())
         return
     await state.update_data(price=price)
     await message.answer(f"Цена: <b>{price} ₽</b>\n\nУкажите <b>длительность в минутах</b>:")
     await state.set_state(AddServiceStates.DURATION)
+
+
+@router.callback_query(AddServiceStates.PRICE, F.data == "skip_price")
+async def add_svc_skip_price(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(price=None)
+    await callback.message.edit_text("Цена: <b>по договорённости</b>\n\nУкажите <b>длительность в минутах</b>:")
+    await state.set_state(AddServiceStates.DURATION)
+    await callback.answer()
 
 
 @router.message(AddServiceStates.DURATION)
@@ -193,6 +215,6 @@ async def add_svc_duration(message: Message, state: FSMContext, db: AsyncSession
     await state.clear()
     await message.answer(
         f"✅ Услуга <b>{data['name']}</b> добавлена!\n"
-        f"💰 {data['price']} ₽ · ⏱ {duration} мин\n\n"
+        f"💰 {fmt_price(data.get('price'))} · ⏱ {duration} мин\n\n"
         "Используйте /services для управления услугами."
     )

@@ -47,7 +47,7 @@ export default function DatePicker({ master, selectedDate, onSelectDate }: Props
       </button>
 
       <div className="section-title">
-        {service.name} · {service.price} ₽
+        {service.name}{service.price !== null ? ` · ${service.price} ₽` : ' · по договорённости'}
       </div>
 
       <div className="section-title">Выберите дату</div>
