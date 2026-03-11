@@ -369,6 +369,16 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
     await callback.message.answer("Вот ваше главное меню:", reply_markup=main_menu_kb())
 
 
+# ── Main menu refresh ────────────────────────────────────────────
+
+@router.message(Command("menu"))
+async def cmd_menu(message: Message, master: Master | None):
+    if not master or not master.is_onboarded:
+        await message.answer("Сначала завершите настройку профиля через /start")
+        return
+    await message.answer("Главное меню:", reply_markup=main_menu_kb())
+
+
 # ── Reset onboarding ─────────────────────────────────────────────
 
 @router.message(Command("reset"))
