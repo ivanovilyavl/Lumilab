@@ -22,8 +22,14 @@ def _get_bot():
     return Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
-async def _find_client_tg_id(booking: Booking) -> int | None:
-    """Lookup client telegram_id from tg_hash via Redis cache."""
+async def _find_client_tg_id(booking: Booking) -> int | None | bool:
+    """Lookup client telegram_id from tg_hash via Redis cache.
+
+    Returns:
+        int   — telegram_id found, can send
+        None  — booking has no tg_hash (anonymous client), nothing to send
+        False — tg_hash exists but Redis lookup failed (transient); caller should NOT mark as sent
+    """
     if not booking.client_tg_hash:
         return None
     try:
@@ -34,14 +40,17 @@ async def _find_client_tg_id(booking: Booking) -> int | None:
         await redis.aclose()
         if tg_id_bytes:
             return int(tg_id_bytes)
-    except Exception:
-        pass
-    return None
+        # Key absent (expired or never written) — treat as permanent miss
+        return None
+    except Exception as e:
+        logger.warning(f"Redis lookup failed for booking {booking.id}: {e}")
+        return False  # transient failure — do not mark as sent
 
 
 async def _send_reminder_24h():
     from db.session import async_session
     from bot.keyboards.common import client_cancel_kb
+    from shared.i18n import fmt_price as _fmt_price
 
     now = datetime.utcnow()
     window_start = now + timedelta(hours=22)
@@ -60,40 +69,53 @@ async def _send_reminder_24h():
         )
         bookings = list(result.scalars().all())
 
+        if not bookings:
+            logger.info("24h reminders: no eligible bookings")
+            return
+
         bot = _get_bot()
         sent = 0
 
-        for b in bookings:
-            booking_dt = datetime.combine(b.booking_date, b.start_time)
-            if not (window_start <= booking_dt <= window_end):
-                continue
+        try:
+            for b in bookings:
+                booking_dt = datetime.combine(b.booking_date, b.start_time)
+                if not (window_start <= booking_dt <= window_end):
+                    continue
 
-            client_tg_id = await _find_client_tg_id(b)
-            if client_tg_id:
-                try:
-                    lang = getattr(b.master, "language", "ru") or "ru"
-                    currency = getattr(b.master, "currency", "RUB") or "RUB"
-                    from shared.i18n import fmt_price as _fmt_price
-                    min_unit = t(lang, "min_unit")
-                    price_str = _fmt_price(b.service.price, currency, lang)
-                    await bot.send_message(
-                        client_tg_id,
-                        t(lang, "reminder_24h",
-                          master=b.master.display_name or "Мастер",
-                          service=b.service.name,
-                          duration=f"{b.service.duration_min} {min_unit}",
-                          price=price_str,
-                          time=b.start_time.strftime("%H:%M")),
-                        reply_markup=client_cancel_kb(b.id),
-                    )
-                    sent += 1
-                except Exception as e:
-                    logger.warning(f"Failed to send 24h reminder for booking {b.id}: {e}")
+                tg_result = await _find_client_tg_id(b)
+                if tg_result is False:
+                    # Transient Redis error — skip this booking, retry next run
+                    continue
 
-            b.reminder_24h_sent = True
+                # tg_result is None (anonymous) or int (telegram_id found)
+                if tg_result is not None and b.service is not None:
+                    try:
+                        lang = getattr(b.master, "language", "ru") or "ru"
+                        currency = getattr(b.master, "currency", "RUB") or "RUB"
+                        min_unit = t(lang, "min_unit")
+                        price_str = _fmt_price(b.service.price, currency, lang)
+                        await bot.send_message(
+                            tg_result,
+                            t(lang, "reminder_24h",
+                              master=b.master.display_name or "Мастер",
+                              service=b.service.name,
+                              duration=f"{b.service.duration_min} {min_unit}",
+                              price=price_str,
+                              time=b.start_time.strftime("%H:%M")),
+                            reply_markup=client_cancel_kb(b.id),
+                        )
+                        sent += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to send 24h reminder for booking {b.id}: {e}")
+                        continue  # do not mark as sent — retry next run
 
-        await db.commit()
-        await bot.session.close()
+                # Mark as sent: anonymous client (tg_result is None) or message delivered
+                b.reminder_24h_sent = True
+
+            await db.commit()
+        finally:
+            await bot.session.close()
+
         logger.info(f"24h reminders: {sent} sent out of {len(bookings)} bookings")
 
 
@@ -117,34 +139,46 @@ async def _send_reminder_2h():
         )
         bookings = list(result.scalars().all())
 
+        if not bookings:
+            logger.info("2h reminders: no eligible bookings")
+            return
+
         bot = _get_bot()
         sent = 0
 
-        for b in bookings:
-            booking_dt = datetime.combine(b.booking_date, b.start_time)
-            if not (window_start <= booking_dt <= window_end):
-                continue
+        try:
+            for b in bookings:
+                booking_dt = datetime.combine(b.booking_date, b.start_time)
+                if not (window_start <= booking_dt <= window_end):
+                    continue
 
-            client_tg_id = await _find_client_tg_id(b)
-            if client_tg_id:
-                try:
-                    lang = getattr(b.master, "language", "ru") or "ru"
-                    await bot.send_message(
-                        client_tg_id,
-                        t(lang, "reminder_2h",
-                          master=b.master.display_name or "Мастер",
-                          service=b.service.name,
-                          time=b.start_time.strftime("%H:%M")),
-                        reply_markup=client_cancel_kb(b.id),
-                    )
-                    sent += 1
-                except Exception as e:
-                    logger.warning(f"Failed to send 2h reminder for booking {b.id}: {e}")
+                tg_result = await _find_client_tg_id(b)
+                if tg_result is False:
+                    # Transient Redis error — skip, retry next run
+                    continue
 
-            b.reminder_2h_sent = True
+                if tg_result is not None and b.service is not None:
+                    try:
+                        lang = getattr(b.master, "language", "ru") or "ru"
+                        await bot.send_message(
+                            tg_result,
+                            t(lang, "reminder_2h",
+                              master=b.master.display_name or "Мастер",
+                              service=b.service.name,
+                              time=b.start_time.strftime("%H:%M")),
+                            reply_markup=client_cancel_kb(b.id),
+                        )
+                        sent += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to send 2h reminder for booking {b.id}: {e}")
+                        continue  # do not mark as sent — retry next run
 
-        await db.commit()
-        await bot.session.close()
+                b.reminder_2h_sent = True
+
+            await db.commit()
+        finally:
+            await bot.session.close()
+
         logger.info(f"2h reminders: {sent} sent out of {len(bookings)} bookings")
 
 
@@ -169,60 +203,66 @@ async def _auto_cancel_pending():
         )
         bookings = list(result.scalars().all())
 
+        if not bookings:
+            logger.info("Auto-cancel: no pending bookings")
+            return
+
         bot = _get_bot()
         cancelled = 0
 
-        for b in bookings:
-            booking_dt = datetime.combine(b.booking_date, b.start_time)
-            created_at = b.created_at
-            twelve_h_deadline = created_at + timedelta(hours=12)
-            two_h_before = booking_dt - timedelta(hours=2)
+        try:
+            for b in bookings:
+                booking_dt = datetime.combine(b.booking_date, b.start_time)
+                created_at = b.created_at
+                twelve_h_deadline = created_at + timedelta(hours=12)
+                two_h_before = booking_dt - timedelta(hours=2)
 
-            # Determine actual cancel time
-            if twelve_h_deadline > two_h_before:
-                # 12h would be too late — cancel at 2h before appointment
-                cancel_at = two_h_before
-            else:
-                cancel_at = twelve_h_deadline
+                # Determine actual cancel time
+                if twelve_h_deadline > two_h_before:
+                    cancel_at = two_h_before
+                else:
+                    cancel_at = twelve_h_deadline
 
-            if now < cancel_at:
-                continue  # Not time yet
+                if now < cancel_at:
+                    continue  # Not time yet
 
-            b.status = "cancelled"
-            b.cancel_reason = "Автоотмена: мастер не подтвердил вовремя"
-            db.add(Event(
-                master_id=b.master_id,
-                event_type="booking_auto_cancelled",
-                payload={"booking_id": b.id},
-            ))
-            cancelled += 1
+                b.status = "cancelled"
+                b.cancel_reason = "Автоотмена: мастер не подтвердил вовремя"
+                db.add(Event(
+                    master_id=b.master_id,
+                    event_type="booking_auto_cancelled",
+                    payload={"booking_id": b.id},
+                ))
+                cancelled += 1
 
-            # Notify client
-            client_tg_id = await _find_client_tg_id(b)
-            if client_tg_id:
-                try:
-                    await bot.send_message(
-                        client_tg_id,
-                        f"😔 Мастер не успел подтвердить вашу запись.\n"
-                        f"Слот освободился — можете записаться снова.",
-                    )
-                except Exception:
-                    pass
+                # Notify client
+                tg_result = await _find_client_tg_id(b)
+                if isinstance(tg_result, int):
+                    try:
+                        await bot.send_message(
+                            tg_result,
+                            "😔 Мастер не успел подтвердить вашу запись.\n"
+                            "Слот освободился — можете записаться снова.",
+                        )
+                    except Exception:
+                        pass
 
-            # Notify master
-            if b.master:
-                try:
-                    await bot.send_message(
-                        b.master.telegram_id,
-                        f"⚠️ Запись «{b.client_pseudo}» на "
-                        f"{b.booking_date.strftime('%d.%m')} в {b.start_time.strftime('%H:%M')} "
-                        f"автоматически отменена — не подтверждена за 12 часов.",
-                    )
-                except Exception:
-                    pass
+                # Notify master
+                if b.master:
+                    try:
+                        await bot.send_message(
+                            b.master.telegram_id,
+                            f"⚠️ Запись «{b.client_pseudo}» на "
+                            f"{b.booking_date.strftime('%d.%m')} в {b.start_time.strftime('%H:%M')} "
+                            f"автоматически отменена — не подтверждена за 12 часов.",
+                        )
+                    except Exception:
+                        pass
 
-        await db.commit()
-        await bot.session.close()
+            await db.commit()
+        finally:
+            await bot.session.close()
+
         logger.info(f"Auto-cancel: {cancelled} pending bookings cancelled")
 
 
