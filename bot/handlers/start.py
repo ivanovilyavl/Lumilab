@@ -17,6 +17,47 @@ from shared.utils import generate_referral_code
 router = Router()
 logger = logging.getLogger(__name__)
 
+WELCOME_TEXT = (
+    "👋 <b>Добро пожаловать в Plotina bot!</b>\n\n"
+    "Я помогаю мастерам и специалистам принимать онлайн-запись от клиентов — "
+    "без мессенджеров, таблиц и путаницы.\n\n"
+    "❌ <b>Знакомо?</b>\n"
+    "• Клиенты пишут в личку — записи теряются\n"
+    "• Сложно отслеживать, кто на когда записан\n"
+    "• Нет удобного способа поделиться расписанием\n\n"
+    "✅ <b>Что умеет бот:</b>\n"
+    "📅 Принимать запись 24/7 без вашего участия\n"
+    "👥 Вести список клиентов с историей визитов\n"
+    "🔔 Напоминать клиентам о записи за 24 ч и 2 ч\n"
+    "📨 Отправлять рассылки своей базе клиентов\n\n"
+    "🚀 <b>Как это работает:</b>\n"
+    "1. Настройте профиль (~2 минуты)\n"
+    "2. Поделитесь ссылкой с клиентами\n"
+    "3. Клиенты записываются сами — всё видно здесь\n\n"
+    "─────────────────────────\n"
+    "📜 <b>Согласие на обработку персональных данных</b>\n\n"
+    "Нажимая «Принять и начать», вы даёте согласие на обработку ваших "
+    "персональных данных (имя, юзернейм Telegram, Telegram ID) командой бота "
+    "<b>Plotina bot</b> в целях предоставления сервиса онлайн-записи.\n\n"
+    "Данные не передаются третьим лицам."
+)
+
+RESET_CONSENT_TEXT = (
+    "🔄 <b>Начнём настройку заново!</b>\n\n"
+    "📜 <b>Согласие на обработку персональных данных</b>\n\n"
+    "Нажимая «Принять и продолжить», вы подтверждаете согласие на обработку "
+    "ваших персональных данных (имя, юзернейм Telegram, Telegram ID) командой "
+    "бота <b>Plotina bot</b> в целях предоставления сервиса онлайн-записи.\n\n"
+    "Данные не передаются третьим лицам."
+)
+
+
+def consent_kb(action: str = "new") -> InlineKeyboardMarkup:
+    label = "✅ Принять и начать" if action == "new" else "✅ Принять и продолжить"
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=label, callback_data=f"consent:{action}")
+    ]])
+
 
 async def log_event(db: AsyncSession, master_id: int | None, event_type: str, payload: dict | None = None):
     event = Event(master_id=master_id, event_type=event_type, payload=payload or {})
@@ -68,12 +109,8 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
         await db.commit()
         # Store existing master ID so process_step can update instead of insert
         await state.update_data(existing_master_id=master.id)
-        await message.answer(
-            "🔄 Начнём настройку заново!\n\n"
-            "Как вас называть клиентам?\n"
-            "(Можно имя, название студии или любой псевдоним)"
-        )
-        await state.set_state(OnboardingStates.NAME)
+        await message.answer(RESET_CONSENT_TEXT, reply_markup=consent_kb("reset"))
+        await state.set_state(OnboardingStates.CONSENT)
         return
 
     # [DISABLED - referral] Parse referral code from deep link: /start ref_XXXX
@@ -85,16 +122,27 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
     #     if referrer and referrer.telegram_id != telegram_id:
     #         referrer_id = referrer.id
 
-    # New master — start onboarding
+    # New master — show welcome + consent
     await state.update_data(referrer_id=None)
-    await message.answer(
-        "👋 Добро пожаловать в ЗАПИСЬ.БОТ!\n\n"
-        "Я помогу вам принимать онлайн-запись от клиентов.\n"
-        "Давайте настроим ваш профиль за 2 минуты.\n\n"
+    await message.answer(WELCOME_TEXT, reply_markup=consent_kb("new"))
+    await state.set_state(OnboardingStates.CONSENT)
+
+
+# ── Шаг 0: Согласие ──────────────────────────────────────────────
+
+@router.callback_query(OnboardingStates.CONSENT, F.data.startswith("consent:"))
+async def process_consent(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(
+        consent_given=True,
+        consent_at=datetime.utcnow().isoformat(),
+    )
+    await callback.message.edit_text(
+        "Отлично! Давайте настроим ваш профиль.\n\n"
         "Как вас называть клиентам?\n"
         "(Можно имя, название студии или любой псевдоним)"
     )
     await state.set_state(OnboardingStates.NAME)
+    await callback.answer()
 
 
 # ── Шаг 1: Имя ──────────────────────────────────────────────────
@@ -268,6 +316,9 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
 
     existing_master_id = data.get("existing_master_id")
 
+    consent_at_str = data.get("consent_at")
+    consent_at = datetime.fromisoformat(consent_at_str) if consent_at_str else datetime.utcnow()
+
     if existing_master_id:
         # Update existing master record
         result = await db.execute(select(Master).where(Master.id == existing_master_id))
@@ -276,6 +327,8 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
         master.display_name = data["display_name"]
         master.niche = data["niche"]
         master.is_onboarded = True
+        master.consent_given = True
+        master.consent_at = consent_at
         await db.flush()
     else:
         # Create new master
@@ -288,6 +341,8 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
             niche=data["niche"],
             referral_code=referral_code,
             is_onboarded=True,
+            consent_given=True,
+            consent_at=consent_at,
             subscription_status="trial",
             trial_ends_at=now + timedelta(days=settings.trial_days),
             referrer_id=data.get("referrer_id"),
@@ -368,6 +423,14 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
     # Send main menu
     await callback.message.answer("Вот ваше главное меню:", reply_markup=main_menu_kb())
 
+    # Feedback block
+    await callback.message.answer(
+        "💬 <b>Нам очень важна ваша обратная связь!</b>\n\n"
+        "Если что-то не работает или нужен дополнительный функционал "
+        "для вашей работы — напишите нам прямо в этот бот.\n\n"
+        "Мы читаем каждое сообщение и активно развиваем продукт 🙏"
+    )
+
 
 # ── Main menu refresh ────────────────────────────────────────────
 
@@ -406,13 +469,9 @@ async def cmd_reset(message: Message, state: FSMContext, db: AsyncSession, maste
     master.bio = None
     await db.commit()
 
-    await message.answer(
-        "🔄 Профиль сброшен!\n\n"
-        "Давайте настроим всё заново.\n"
-        "Как вас называть клиентам?\n"
-        "(Можно имя, название студии или любой псевдоним)"
-    )
-    await state.set_state(OnboardingStates.NAME)
+    await state.update_data(existing_master_id=master.id)
+    await message.answer(RESET_CONSENT_TEXT, reply_markup=consent_kb("reset"))
+    await state.set_state(OnboardingStates.CONSENT)
 
 
 # ── Catch unfinished onboarding ──────────────────────────────────

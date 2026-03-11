@@ -36,6 +36,10 @@ class Master(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_onboarded: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Consent
+    consent_given: Mapped[bool] = mapped_column(Boolean, default=False)
+    consent_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
     # Subscription
     subscription_status: Mapped[str] = mapped_column(String(32), default="trial")
     trial_ends_at: Mapped[datetime | None] = mapped_column()

@@ -4,6 +4,7 @@ import { useMaster, useMasterSchedule } from './hooks/useApi';
 import MasterProfile from './pages/MasterProfile';
 import DatePicker from './pages/DatePicker';
 import SlotPicker from './pages/SlotPicker';
+import ConsentScreen from './pages/ConsentScreen';
 import ContactForm from './pages/ContactForm';
 import BookingConfirm from './pages/BookingConfirm';
 import BookingSuccess from './pages/BookingSuccess';
@@ -150,6 +151,10 @@ export default function App() {
         <Route
           path="/slot"
           element={<SlotPicker master={master} onSelectSlot={setSelectedSlot} />}
+        />
+        <Route
+          path="/consent"
+          element={<ConsentScreen master={master} />}
         />
         <Route
           path="/contact"

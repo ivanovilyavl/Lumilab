@@ -55,7 +55,7 @@ export default function SlotPicker({ master, onSelectSlot }: Props) {
               className="slot-btn"
               onClick={() => {
                 onSelectSlot(slot.start_time);
-                navigate(`/contact?id=${serviceId}&date=${date}&time=${slot.start_time}`);
+                navigate(`/consent?id=${serviceId}&date=${date}&time=${slot.start_time}`);
               }}
             >
               {slot.start_time}

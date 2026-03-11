@@ -20,7 +20,7 @@ export default function ContactForm({ clientName, clientPhone, onChangeName, onC
     <div>
       <button
         className="back-link"
-        onClick={() => navigate(`/slot?id=${serviceId}&date=${date}`)}
+        onClick={() => navigate(`/consent?id=${serviceId}&date=${date}&time=${time}`)}
       >
         ← Назад
       </button>

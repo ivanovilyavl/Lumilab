@@ -677,3 +677,10 @@ body {
 .td-client-name { font-weight: 500; display: flex; align-items: center; gap: 4px; }
 .td-note-dot { font-size: 12px; opacity: 0.7; }
 .td-services-mini { font-size: 11px; color: var(--tg-theme-hint-color); margin-top: 2px; }
+
+/* ── Consent screen ──────────────────────────────────────────────────── */
+.consent-block { background: var(--tg-theme-secondary-bg-color); border-radius: 12px; padding: 16px; margin: 16px 0 24px; }
+.consent-intro { margin: 0 0 12px; color: var(--tg-theme-text-color); font-size: 14px; line-height: 1.5; }
+.consent-list { margin: 0 0 12px; padding-left: 20px; color: var(--tg-theme-text-color); font-size: 14px; line-height: 1.6; }
+.consent-list li { margin-bottom: 6px; }
+.consent-note { margin: 0; font-size: 12px; color: var(--tg-theme-hint-color); }
