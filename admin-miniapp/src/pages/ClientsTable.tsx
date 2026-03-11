@@ -111,8 +111,8 @@ export default function ClientsTable({ initData }: Props) {
       {/* Cards view */}
       {viewMode === 'cards' && (
         <div className="admin-list">
-          {filtered.map((client, i) => (
-            <div key={client.tg_hash || `manual-${i}`} className="client-card-admin">
+          {filtered.map((client) => (
+            <div key={client.tg_hash || `manual:${client.pseudo}`} className="client-card-admin">
               <div className={`client-avatar-admin${client.is_manual ? ' manual' : ''}`}>
                 {clientInitial(client.pseudo)}
               </div>
@@ -165,8 +165,8 @@ export default function ClientsTable({ initData }: Props) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((client, i) => (
-                <tr key={client.tg_hash || `manual-${i}`}>
+              {filtered.map((client) => (
+                <tr key={client.tg_hash || `manual:${client.pseudo}`}>
                   <td>
                     <div className="td-client">
                       <span>{client.pseudo}</span>

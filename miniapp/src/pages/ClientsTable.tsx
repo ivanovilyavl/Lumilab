@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import type { ClientItem, MasterType } from '../types';
 import { useClients, updateClientNote, sendClientsMessage } from '../hooks/useApi';
 
@@ -298,9 +298,8 @@ export default function ClientsTable({ master, initData }: Props) {
             </thead>
             <tbody>
               {filtered.map((client) => (
-                <>
+                <Fragment key={client.client_key}>
                   <tr
-                    key={client.client_key}
                     className={`${selected.has(client.client_key) ? 'row-selected' : ''}${!client.is_active ? ' row-inactive' : ''}`}
                   >
                     <td>
@@ -341,7 +340,7 @@ export default function ClientsTable({ master, initData }: Props) {
                     </td>
                   </tr>
                   {editingKey === client.client_key && (
-                    <tr key={`${client.client_key}-note`} className="row-note-editor">
+                    <tr className="row-note-editor">
                       <td colSpan={7}>
                         <div className="client-note-editor">
                           <textarea
@@ -373,7 +372,7 @@ export default function ClientsTable({ master, initData }: Props) {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

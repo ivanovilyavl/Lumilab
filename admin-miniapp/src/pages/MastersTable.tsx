@@ -57,6 +57,7 @@ export default function MastersTable({ initData }: Props) {
     total: masters.length,
     trial: masters.filter((m) => m.subscription_status === 'trial').length,
     paying: masters.filter((m) => m.subscription_status === 'active').length,
+    inactive: masters.filter((m) => ['inactive', 'expired'].includes(m.subscription_status)).length,
     onboarded: masters.filter((m) => m.is_onboarded).length,
   }), [masters]);
 
@@ -106,7 +107,7 @@ export default function MastersTable({ initData }: Props) {
               {t === 'all' ? `Все (${masters.length})` :
                t === 'trial' ? `Триал (${stats.trial})` :
                t === 'active' ? `Платные (${stats.paying})` :
-               `Неакт. (${masters.length - stats.trial - stats.paying})`}
+               `Неакт. (${stats.inactive})`}
             </button>
           ))}
         </div>
