@@ -87,8 +87,6 @@ export async function createBooking(data: {
   service_id: number;
   date: string;
   start_time: string;
-  client_name: string;
-  client_phone?: string;
   client_telegram_id?: number;
 }): Promise<BookingResult> {
   return fetchJson<BookingResult>('/api/bookings', {

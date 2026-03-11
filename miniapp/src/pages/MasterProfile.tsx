@@ -17,7 +17,7 @@ interface Props {
 
 export default function MasterProfile({ master }: Props) {
   const navigate = useNavigate();
-  const initial = master.display_name.charAt(0).toUpperCase();
+  const initial = (master.display_name ?? '?').charAt(0).toUpperCase();
   const nicheIcon = nicheIcons[master.niche || 'other'] || '⭐';
   const [openQA, setOpenQA] = useState<number | null>(null);
 

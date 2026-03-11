@@ -15,10 +15,11 @@ export interface QAItemType {
 export interface MasterType {
   id: number;
   username: string;
-  display_name: string;
+  display_name: string | null;
   bio: string | null;
   photo_file_id: string | null;
   niche: string | null;
+  accepting_bookings: boolean;
   services: ServiceType[];
   qa_items: QAItemType[];
 }
@@ -36,6 +37,7 @@ export interface BookingResult {
   date: string;
   start_time: string;
   end_time: string;
+  client_pseudo: string;
 }
 
 export interface ClientItem {

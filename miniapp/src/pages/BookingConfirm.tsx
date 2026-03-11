@@ -43,8 +43,6 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
         service_id: service.id,
         date: date,
         start_time: time,
-        client_name: clientName,
-        client_phone: clientPhone || undefined,
         client_telegram_id: tgUser?.id,
       });
       navigate('/success');

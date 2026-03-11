@@ -1,4 +1,3 @@
-import json
 from datetime import date, time, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -6,8 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import validate_telegram_init_data
-from api.deps import get_db
+from api.deps import get_db, get_master_owner
 from db.models import Booking, Master, QAItem, Service
 
 router = APIRouter(prefix="/api", tags=["master"])
@@ -77,36 +75,6 @@ class MasterBookingCreateResult(BaseModel):
     booking_ids: list[int]
 
 
-async def _get_master_owner(
-    username: str,
-    init_data: str | None,
-    db: AsyncSession,
-) -> Master:
-    """Validate Telegram auth and return master if the caller owns this profile."""
-    if not init_data:
-        raise HTTPException(401, "Auth required")
-    auth_data = validate_telegram_init_data(init_data)
-    if not auth_data:
-        raise HTTPException(401, "Invalid auth")
-    user_str = auth_data.get("user")
-    if not user_str:
-        raise HTTPException(401, "No user in auth data")
-    try:
-        user = json.loads(user_str)
-        telegram_id = int(user["id"])
-    except (ValueError, KeyError):
-        raise HTTPException(401, "Invalid user data")
-
-    result = await db.execute(
-        select(Master).where(Master.username == username, Master.is_active == True)
-    )
-    master = result.scalar_one_or_none()
-    if not master:
-        raise HTTPException(404, "Master not found")
-    if master.telegram_id != telegram_id:
-        raise HTTPException(403, "Forbidden")
-    return master
-
 
 @router.get("/master/{username}/schedule", response_model=MasterScheduleOut)
 async def get_master_schedule(
@@ -114,7 +82,7 @@ async def get_master_schedule(
     db: AsyncSession = Depends(get_db),
     x_telegram_init_data: str | None = Header(default=None),
 ):
-    master = await _get_master_owner(username, x_telegram_init_data, db)
+    master = await get_master_owner(username, x_telegram_init_data, db)
 
     today = date.today()
     rows = await db.execute(
@@ -150,7 +118,7 @@ async def create_master_booking(
     db: AsyncSession = Depends(get_db),
     x_telegram_init_data: str | None = Header(default=None),
 ):
-    master = await _get_master_owner(username, x_telegram_init_data, db)
+    master = await get_master_owner(username, x_telegram_init_data, db)
 
     # Validate service belongs to this master
     svc_result = await db.execute(
