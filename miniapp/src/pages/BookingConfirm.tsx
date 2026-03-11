@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createBooking } from '../hooks/useApi';
 import type { MasterType } from '../types';
-import { useT } from '../i18n';
+import { useT, fmtPrice } from '../i18n';
 
 interface Props {
   master: MasterType;
@@ -34,9 +34,7 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
     weekday: 'short',
   });
 
-  const priceDisplay = service.price !== null
-    ? `${service.price} ₽`
-    : T('price.by_agreement');
+  const priceDisplay = fmtPrice(service.price, master.currency, T);
 
   // Get Telegram user id if available
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;

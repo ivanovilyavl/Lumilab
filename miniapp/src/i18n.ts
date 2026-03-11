@@ -96,3 +96,12 @@ export function useT(lang: string | null | undefined): (key: string) => string {
   const l = lang && SUPPORTED.has(lang) ? lang : 'ru';
   return (key: string) => STRINGS[l][key] ?? STRINGS['ru'][key] ?? key;
 }
+
+const CURRENCY_SYMBOLS: Record<string, string> = { RUB: '₽', USD: '$', EUR: '€' };
+
+export function fmtPrice(price: number | null, currency: string, T: (key: string) => string): string {
+  if (price === null) return T('price.by_agreement');
+  const sym = CURRENCY_SYMBOLS[currency] ?? currency;
+  if (currency === 'USD' || currency === 'EUR') return `${sym}${price}`;
+  return `${price} ${sym}`;
+}

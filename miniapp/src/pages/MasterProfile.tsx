@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { MasterType } from '../types';
+import { fmtPrice, useT } from '../i18n';
 
 const nicheIcons: Record<string, string> = {
   beauty: '💅',
@@ -17,6 +18,7 @@ interface Props {
 
 export default function MasterProfile({ master }: Props) {
   const navigate = useNavigate();
+  const T = useT(master.language);
   const initial = (master.display_name ?? '?').charAt(0).toUpperCase();
   const nicheIcon = nicheIcons[master.niche || 'other'] || '⭐';
   const [openQA, setOpenQA] = useState<number | null>(null);
@@ -40,7 +42,7 @@ export default function MasterProfile({ master }: Props) {
           <div className="service-name">{service.name}</div>
           <div className="service-meta">
             <span>{service.duration_min} мин</span>
-            <span className="service-price">{service.price !== null ? `${service.price} ₽` : 'по договорённости'}</span>
+            <span className="service-price">{fmtPrice(service.price, master.currency, T)}</span>
           </div>
           {service.description && (
             <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 4 }}>

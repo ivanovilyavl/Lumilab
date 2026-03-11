@@ -13,7 +13,7 @@ from bot.keyboards.common import niche_kb, schedule_days_kb, slot_step_kb, main_
 from bot.states.onboarding import OnboardingStates
 from db.models import Master, Service, ScheduleTemplate, ScheduleOverride, Event, Referral
 from shared.config import settings
-from shared.i18n import t, LANG_LABELS
+from shared.i18n import t, LANG_LABELS, CURRENCY_LABELS, SUPPORTED_CURRENCIES
 from shared.utils import generate_referral_code
 
 router = Router()
@@ -68,6 +68,17 @@ def language_kb() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=label, callback_data=f"setlang:{code}")
         for code, label in LANG_LABELS.items()
     ]])
+
+
+def currency_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    buttons = [
+        InlineKeyboardButton(
+            text=t(lang, f"currency_label_{code}"),
+            callback_data=f"setcurrency:{code}",
+        )
+        for code in ("RUB", "USD", "EUR")
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=[buttons])
 
 
 async def log_event(db: AsyncSession, master_id: int | None, event_type: str, payload: dict | None = None):
@@ -163,7 +174,26 @@ async def process_language(callback: CallbackQuery, state: FSMContext):
     lang = callback.data.split(":")[1]
     await state.update_data(language=lang)
     await callback.message.edit_text(
-        f"{t(lang, 'lang_chosen')}\n\n{t(lang, 'enter_name')}"
+        f"{t(lang, 'lang_chosen')}\n\n{t(lang, 'currency_select')}",
+        reply_markup=currency_kb(lang),
+    )
+    await state.set_state(OnboardingStates.CURRENCY)
+    await callback.answer()
+
+
+# ── Шаг 0c: Валюта ───────────────────────────────────────────────
+
+@router.callback_query(OnboardingStates.CURRENCY, F.data.startswith("setcurrency:"))
+async def process_currency(callback: CallbackQuery, state: FSMContext):
+    currency = callback.data.split(":")[1]
+    if currency not in SUPPORTED_CURRENCIES:
+        currency = "RUB"
+    await state.update_data(currency=currency)
+    data = await state.get_data()
+    lang = data.get("language", "ru")
+    label = t(lang, f"currency_label_{currency}")
+    await callback.message.edit_text(
+        f"{t(lang, 'currency_chosen', label=label)}\n\n{t(lang, 'enter_name')}"
     )
     await state.set_state(OnboardingStates.NAME)
     await callback.answer()
@@ -224,7 +254,9 @@ async def process_service_price(message: Message, state: FSMContext):
         await message.answer(t(lang, "price_error"), reply_markup=price_ask_kb(lang))
         return
     await state.update_data(service_price=price)
-    price_display = f"{price} ₽" if lang == "ru" else str(price)
+    currency = data.get("currency", "RUB")
+    from shared.i18n import fmt_price as _fmt_price
+    price_display = _fmt_price(price, currency, lang)
     await message.answer(t(lang, "price_set", price=price_display))
     await state.set_state(OnboardingStates.SERVICE_DURATION)
 
@@ -355,6 +387,7 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
         master.consent_given = True
         master.consent_at = consent_at
         master.language = data.get("language", "ru")
+        master.currency = data.get("currency", "RUB")
         await db.flush()
     else:
         # Create new master
@@ -370,6 +403,7 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
             consent_given=True,
             consent_at=consent_at,
             language=data.get("language", "ru"),
+            currency=data.get("currency", "RUB"),
             subscription_status="trial",
             trial_ends_at=now + timedelta(days=settings.trial_days),
             referrer_id=data.get("referrer_id"),
@@ -488,6 +522,41 @@ async def process_change_language(callback: CallbackQuery, db: AsyncSession, mas
     master.language = lang
     await db.commit()
     await callback.message.edit_text(t(lang, "lang_chosen"))
+    await callback.answer()
+
+
+# ── /currency — смена валюты ─────────────────────────────────────
+
+@router.message(Command("currency"))
+async def cmd_currency(message: Message, master: Master | None):
+    if not master:
+        return
+    lang = master.language or "ru"
+    await message.answer(
+        t(lang, "currency_select"),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text=t(lang, f"currency_label_{code}"),
+                callback_data=f"changecurrency:{code}",
+            )
+            for code in ("RUB", "USD", "EUR")
+        ]]),
+    )
+
+
+@router.callback_query(F.data.startswith("changecurrency:"))
+async def process_change_currency(callback: CallbackQuery, db: AsyncSession, master: Master | None):
+    if not master:
+        await callback.answer("Мастер не найден", show_alert=True)
+        return
+    currency = callback.data.split(":")[1]
+    if currency not in SUPPORTED_CURRENCIES:
+        currency = "RUB"
+    master.currency = currency
+    await db.commit()
+    lang = master.language or "ru"
+    label = t(lang, f"currency_label_{currency}")
+    await callback.message.edit_text(t(lang, "currency_chosen", label=label))
     await callback.answer()
 
 

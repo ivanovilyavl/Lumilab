@@ -4,6 +4,7 @@ export interface MasterItem {
   display_name: string | null;
   niche: string | null;
   language: string;
+  currency: string;
   subscription_status: string; // "trial" | "active" | "inactive" | "expired"
   is_active: boolean;
   is_onboarded: boolean;

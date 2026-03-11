@@ -79,6 +79,12 @@ STRINGS: dict[str, dict[str, str]] = {
             "🕐 Сегодня в {time}"
         ),
         "min_unit": "мин",
+        # Currency
+        "currency_select": "💱 Выберите валюту для отображения цен на услуги:",
+        "currency_chosen": "✅ Валюта сохранена: {label}",
+        "currency_label_RUB": "₽ Рубль",
+        "currency_label_USD": "$ Доллар",
+        "currency_label_EUR": "€ Евро",
     },
 
     # ── English ───────────────────────────────────────────────────────────
@@ -151,6 +157,12 @@ STRINGS: dict[str, dict[str, str]] = {
             "🕐 Today at {time}"
         ),
         "min_unit": "min",
+        # Currency
+        "currency_select": "💱 Select the currency for displaying service prices:",
+        "currency_chosen": "✅ Currency saved: {label}",
+        "currency_label_RUB": "₽ Ruble",
+        "currency_label_USD": "$ Dollar",
+        "currency_label_EUR": "€ Euro",
     },
 
     # ── Spanish ───────────────────────────────────────────────────────────
@@ -223,11 +235,36 @@ STRINGS: dict[str, dict[str, str]] = {
             "🕐 Hoy a las {time}"
         ),
         "min_unit": "min",
+        # Currency
+        "currency_select": "💱 Selecciona la moneda para mostrar los precios de los servicios:",
+        "currency_chosen": "✅ Moneda guardada: {label}",
+        "currency_label_RUB": "₽ Rublo",
+        "currency_label_USD": "$ Dólar",
+        "currency_label_EUR": "€ Euro",
     },
 }
 
 SUPPORTED_LANGS = {"ru", "en", "es"}
 LANG_LABELS = {"ru": "🇷🇺 Русский", "en": "🇬🇧 English", "es": "🇪🇸 Español"}
+
+CURRENCY_SYMBOLS: dict[str, str] = {"RUB": "₽", "USD": "$", "EUR": "€"}
+SUPPORTED_CURRENCIES = {"RUB", "USD", "EUR"}
+CURRENCY_LABELS = {"RUB": "₽ Рубль", "USD": "$ Доллар", "EUR": "€ Евро"}
+
+
+def currency_symbol(currency: str | None) -> str:
+    return CURRENCY_SYMBOLS.get(currency or "RUB", currency or "RUB")
+
+
+def fmt_price(price: int | None, currency: str | None = "RUB", lang: str | None = "ru") -> str:
+    """Format price with currency symbol; returns localised 'by agreement' if price is None."""
+    if price is None:
+        l = lang if lang in SUPPORTED_LANGS else "ru"
+        return STRINGS[l].get("price_by_agreement") or "по договорённости"
+    sym = currency_symbol(currency)
+    if currency in ("USD", "EUR"):
+        return f"{sym}{price}"
+    return f"{price} {sym}"
 
 
 def t(lang: str | None, key: str, **kwargs: object) -> str:

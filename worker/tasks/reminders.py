@@ -72,9 +72,10 @@ async def _send_reminder_24h():
             if client_tg_id:
                 try:
                     lang = getattr(b.master, "language", "ru") or "ru"
+                    currency = getattr(b.master, "currency", "RUB") or "RUB"
+                    from shared.i18n import fmt_price as _fmt_price
                     min_unit = t(lang, "min_unit")
-                    price_str = (f"{b.service.price} ₽" if b.service.price is not None
-                                 else t(lang, "price_by_agreement"))
+                    price_str = _fmt_price(b.service.price, currency, lang)
                     await bot.send_message(
                         client_tg_id,
                         t(lang, "reminder_24h",

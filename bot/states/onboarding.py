@@ -4,6 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 class OnboardingStates(StatesGroup):
     CONSENT = State()        # Шаг 0: welcome + согласие на обработку данных
     LANGUAGE = State()       # Шаг 0b: выбор языка
+    CURRENCY = State()       # Шаг 0c: выбор валюты
     NAME = State()           # Шаг 1: имя мастера
     NICHE = State()          # Шаг 2: выбор ниши
     SERVICE_NAME = State()   # Шаг 3a: название услуги

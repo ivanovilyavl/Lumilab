@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-def format_booking(b: Booking) -> str:
+def format_booking(b: Booking, currency: str = "RUB") -> str:
     status_map = {
         "pending": "⏳",
         "confirmed": "✅",
@@ -38,7 +38,7 @@ def format_booking(b: Booking) -> str:
     }
     icon = status_map.get(b.status, "❓")
     svc_name = b.service.name if b.service else "—"
-    price = f" · {b.service.price} ₽" if b.service and b.service.price else ""
+    price = f" · {fmt_price(b.service.price, currency)}" if b.service and b.service.price else ""
     duration = f" · {b.service.duration_min} мин" if b.service else ""
     return (
         f"{icon} <b>{b.client_pseudo}</b>\n"
@@ -61,7 +61,7 @@ async def _render_pending(db: AsyncSession, master: Master) -> tuple[str, Inline
     if not bookings:
         text = "📖 <b>Записи</b>\n\n⏳ Ожидающих подтверждения записей нет."
     else:
-        lines = [format_booking(b) for b in bookings]
+        lines = [format_booking(b, master.currency or "RUB") for b in bookings]
         text = f"⏳ <b>Ожидают подтверждения ({len(bookings)}):</b>\n\n" + "\n".join(lines)
 
     buttons = []
@@ -110,7 +110,7 @@ async def tab_today(callback: CallbackQuery, db: AsyncSession, master: Master):
     if not bookings:
         text = "📅 Сегодня записей нет."
     else:
-        lines = [format_booking(b) for b in bookings]
+        lines = [format_booking(b, master.currency or "RUB") for b in bookings]
         text = f"📅 <b>Сегодня ({len(bookings)}):</b>\n\n" + "\n".join(lines)
 
     buttons = []
@@ -149,7 +149,7 @@ async def tab_upcoming(callback: CallbackQuery, db: AsyncSession, master: Master
     if not bookings:
         text = "📆 Нет предстоящих записей."
     else:
-        lines = [format_booking(b) for b in bookings]
+        lines = [format_booking(b, master.currency or "RUB") for b in bookings]
         text = f"📆 <b>Предстоящие ({len(bookings)}):</b>\n\n" + "\n".join(lines)
     await callback.message.edit_text(text, reply_markup=booking_tabs_kb())
     await callback.answer()
@@ -173,7 +173,7 @@ async def tab_history(callback: CallbackQuery, db: AsyncSession, master: Master)
     if not bookings:
         text = "📋 История пуста."
     else:
-        lines = [format_booking(b) for b in bookings]
+        lines = [format_booking(b, master.currency or "RUB") for b in bookings]
         text = f"📋 <b>История:</b>\n\n" + "\n".join(lines)
     await callback.message.edit_text(text, reply_markup=booking_tabs_kb())
     await callback.answer()
@@ -200,8 +200,9 @@ async def bk_confirm(callback: CallbackQuery, db: AsyncSession, master: Master):
     await callback.answer("✅ Запись подтверждена!")
 
     lang = getattr(master, "language", "ru") or "ru"
+    currency = getattr(master, "currency", "RUB") or "RUB"
     min_unit = t(lang, "min_unit")
-    price_str = fmt_price(service.price) if service else ""
+    price_str = fmt_price(service.price, currency) if service else ""
     service_line = (
         t(lang, "service_line",
           service=service.name,

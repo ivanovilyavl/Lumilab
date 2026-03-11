@@ -12,8 +12,9 @@ from shared.config import settings
 router = Router()
 
 
-def fmt_price(price: int | None) -> str:
-    return f"{price} ₽" if price is not None else "по договорённости"
+def fmt_price(price: int | None, currency: str = "RUB") -> str:
+    from shared.i18n import fmt_price as _fmt
+    return _fmt(price, currency, "ru")
 
 
 def price_ask_kb(lang: str = "ru") -> InlineKeyboardMarkup:
@@ -23,13 +24,13 @@ def price_ask_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     ]])
 
 
-def services_list_kb(services: list[Service]) -> InlineKeyboardMarkup:
+def services_list_kb(services: list[Service], currency: str = "RUB") -> InlineKeyboardMarkup:
     buttons = []
     for s in services:
         status = "✅" if s.is_active else "🙈"
         buttons.append([
             InlineKeyboardButton(
-                text=f"{status} {s.name} — {fmt_price(s.price)} ({s.duration_min} мин)",
+                text=f"{status} {s.name} — {fmt_price(s.price, currency)} ({s.duration_min} мин)",
                 callback_data=f"svc_view:{s.id}",
             )
         ])
@@ -70,7 +71,7 @@ async def cmd_services(message: Message, db: AsyncSession, master: Master):
         )
         return
 
-    await message.answer("📋 <b>Ваши услуги:</b>", reply_markup=services_list_kb(services))
+    await message.answer("📋 <b>Ваши услуги:</b>", reply_markup=services_list_kb(services, master.currency or "RUB"))
 
 
 @router.callback_query(F.data == "svc_back")
@@ -79,20 +80,21 @@ async def svc_back(callback: CallbackQuery, db: AsyncSession, master: Master):
         select(Service).where(Service.master_id == master.id).order_by(Service.sort_order)
     )
     services = list(result.scalars().all())
-    await callback.message.edit_text("📋 <b>Ваши услуги:</b>", reply_markup=services_list_kb(services))
+    await callback.message.edit_text("📋 <b>Ваши услуги:</b>", reply_markup=services_list_kb(services, master.currency or "RUB"))
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("svc_view:"))
-async def svc_view(callback: CallbackQuery, db: AsyncSession):
+async def svc_view(callback: CallbackQuery, db: AsyncSession, master: Master):
     service_id = int(callback.data.split(":")[1])
     service = await db.get(Service, service_id)
     if not service:
         await callback.answer("Услуга не найдена", show_alert=True)
         return
+    currency = master.currency or "RUB"
     text = (
         f"📋 <b>{service.name}</b>\n\n"
-        f"💰 Цена: {fmt_price(service.price)}\n"
+        f"💰 Цена: {fmt_price(service.price, currency)}\n"
         f"⏱ Длительность: {service.duration_min} мин\n"
         f"📝 Описание: {service.description or '—'}\n"
         f"Статус: {'✅ Активна' if service.is_active else '🙈 Скрыта'}"
@@ -102,7 +104,7 @@ async def svc_view(callback: CallbackQuery, db: AsyncSession):
 
 
 @router.callback_query(F.data.startswith("svc_toggle:"))
-async def svc_toggle(callback: CallbackQuery, db: AsyncSession):
+async def svc_toggle(callback: CallbackQuery, db: AsyncSession, master: Master):
     service_id = int(callback.data.split(":")[1])
     service = await db.get(Service, service_id)
     if not service:
@@ -113,9 +115,10 @@ async def svc_toggle(callback: CallbackQuery, db: AsyncSession):
     status = "показана клиентам" if service.is_active else "скрыта от клиентов"
     await callback.answer(f"Услуга {status}")
     # Refresh view
+    currency = master.currency or "RUB"
     text = (
         f"📋 <b>{service.name}</b>\n\n"
-        f"💰 Цена: {fmt_price(service.price)}\n"
+        f"💰 Цена: {fmt_price(service.price, currency)}\n"
         f"⏱ Длительность: {service.duration_min} мин\n"
         f"Статус: {'✅ Активна' if service.is_active else '🙈 Скрыта'}"
     )
@@ -152,6 +155,7 @@ async def svc_add_start(callback: CallbackQuery, state: FSMContext, db: AsyncSes
             )
             return
 
+    await state.update_data(currency=master.currency or "RUB")
     await callback.message.edit_text("Введите <b>название</b> новой услуги:")
     await state.set_state(AddServiceStates.NAME)
     await callback.answer()
@@ -165,8 +169,7 @@ async def add_svc_name(message: Message, state: FSMContext):
         return
     await state.update_data(name=name)
     await message.answer(
-        f"Услуга: <b>{name}</b>\n\n"
-        "Укажите <b>цену в рублях</b> или пропустите, если цена индивидуальная:",
+        f"Услуга: <b>{name}</b>\n\nУкажите <b>цену</b> или пропустите, если цена индивидуальная:",
         reply_markup=price_ask_kb(),
     )
     await state.set_state(AddServiceStates.PRICE)
@@ -181,8 +184,10 @@ async def add_svc_price(message: Message, state: FSMContext):
     except ValueError:
         await message.answer("Введите цену числом от 0 до 1 000 000:", reply_markup=price_ask_kb())
         return
+    data = await state.get_data()
+    currency = data.get("currency", "RUB")
     await state.update_data(price=price)
-    await message.answer(f"Цена: <b>{price} ₽</b>\n\nУкажите <b>длительность в минутах</b>:")
+    await message.answer(f"Цена: <b>{fmt_price(price, currency)}</b>\n\nУкажите <b>длительность в минутах</b>:")
     await state.set_state(AddServiceStates.DURATION)
 
 
@@ -214,8 +219,9 @@ async def add_svc_duration(message: Message, state: FSMContext, db: AsyncSession
     db.add(service)
     await db.commit()
     await state.clear()
+    currency = data.get("currency", "RUB")
     await message.answer(
         f"✅ Услуга <b>{data['name']}</b> добавлена!\n"
-        f"💰 {fmt_price(data.get('price'))} · ⏱ {duration} мин\n\n"
+        f"💰 {fmt_price(data.get('price'), currency)} · ⏱ {duration} мин\n\n"
         "Используйте /services для управления услугами."
     )

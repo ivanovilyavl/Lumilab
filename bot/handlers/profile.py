@@ -33,6 +33,7 @@ def _profile_edit_kb() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(text="🖼 Фото", callback_data="profile_edit:photo"),
+            InlineKeyboardButton(text="💱 Валюта", callback_data="profile_edit:currency"),
         ],
     ])
 
@@ -184,3 +185,24 @@ async def process_photo_text(message: Message, state: FSMContext, db: AsyncSessi
 async def cancel_profile_edit(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Отменено.")
+
+
+# ── /currency (alias через профиль) ──────────────────────────────
+
+@router.callback_query(F.data == "profile_edit:currency")
+async def cb_set_currency(callback, master: Master | None):
+    if not master:
+        return
+    from shared.i18n import t, SUPPORTED_CURRENCIES
+    lang = master.language or "ru"
+    await callback.message.answer(
+        t(lang, "currency_select"),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text=t(lang, f"currency_label_{code}"),
+                callback_data=f"changecurrency:{code}",
+            )
+            for code in ("RUB", "USD", "EUR")
+        ]]),
+    )
+    await callback.answer()

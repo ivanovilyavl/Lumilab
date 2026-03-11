@@ -43,6 +43,7 @@ class MasterItem(BaseModel):
     display_name: str | None
     niche: str | None
     language: str
+    currency: str
     subscription_status: str
     is_active: bool
     is_onboarded: bool
@@ -128,6 +129,7 @@ async def list_masters(
             display_name=m.display_name,
             niche=m.niche,
             language=m.language or "ru",
+            currency=m.currency or "RUB",
             subscription_status=m.subscription_status,
             is_active=m.is_active,
             is_onboarded=m.is_onboarded,

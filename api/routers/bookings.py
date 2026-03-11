@@ -131,8 +131,10 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
 
         bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
         lang = getattr(master, "language", "ru") or "ru"
+        currency = getattr(master, "currency", "RUB") or "RUB"
         min_unit = t(lang, "min_unit")
-        price_str = f"{service.price} ₽" if service.price is not None else t(lang, "price_by_agreement")
+        from shared.i18n import fmt_price as _fmt_price
+        price_str = _fmt_price(service.price, currency, lang)
 
         await bot.send_message(
             master.telegram_id,

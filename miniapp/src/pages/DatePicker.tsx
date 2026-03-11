@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { MasterType } from '../types';
+import { fmtPrice, useT } from '../i18n';
 
 const DAY_NAMES = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTH_NAMES = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -22,6 +23,7 @@ export default function DatePicker({ master, selectedDate, onSelectDate }: Props
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const serviceId = params.get('id');
+  const T = useT(master.language);
 
   const service = master.services.find((s) => s.id === Number(serviceId));
 
@@ -47,7 +49,7 @@ export default function DatePicker({ master, selectedDate, onSelectDate }: Props
       </button>
 
       <div className="section-title">
-        {service.name}{service.price !== null ? ` · ${service.price} ₽` : ' · по договорённости'}
+        {service.name} · {fmtPrice(service.price, master.currency, T)}
       </div>
 
       <div className="section-title">Выберите дату</div>

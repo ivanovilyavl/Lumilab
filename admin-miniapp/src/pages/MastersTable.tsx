@@ -22,6 +22,12 @@ const LANG_FLAGS: Record<string, string> = {
   es: '🇪🇸',
 };
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  RUB: '₽',
+  USD: '$',
+  EUR: '€',
+};
+
 const SUB_CLASS: Record<string, string> = {
   trial: 'badge-trial',
   active: 'badge-active',
@@ -253,6 +259,7 @@ export default function MastersTable({ initData }: Props) {
                       {SUB_LABELS[master.subscription_status] || master.subscription_status}
                     </span>
                     <span title={master.language}>{LANG_FLAGS[master.language] ?? master.language}</span>
+                    <span title={master.currency} className="badge badge-inactive" style={{ fontFamily: 'monospace' }}>{CURRENCY_SYMBOLS[master.currency] ?? master.currency}</span>
                     {!master.is_onboarded && (
                       <span className="badge badge-pending">не онбордился</span>
                     )}
@@ -320,7 +327,9 @@ export default function MastersTable({ initData }: Props) {
                       <span className="badge badge-no-consent" style={{ marginLeft: 4 }}>нет согл.</span>
                     )}
                   </td>
-                  <td title={master.language}>{LANG_FLAGS[master.language] ?? master.language}</td>
+                  <td title={`${master.language} / ${master.currency}`}>
+                    {LANG_FLAGS[master.language] ?? master.language}&nbsp;{CURRENCY_SYMBOLS[master.currency] ?? master.currency}
+                  </td>
                   <td className="td-num">{master.total_bookings}</td>
                   <td className="td-num">{master.total_clients}</td>
                   <td className="td-date">{formatDate(master.created_at)}</td>
