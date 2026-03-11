@@ -8,6 +8,7 @@ import ContactForm from './pages/ContactForm';
 import BookingConfirm from './pages/BookingConfirm';
 import BookingSuccess from './pages/BookingSuccess';
 import MasterCalendar from './pages/MasterCalendar';
+import ClientsTable from './pages/ClientsTable';
 import './App.css';
 
 function getStartParam(): string | null {
@@ -24,9 +25,9 @@ function getStartParam(): string | null {
   return url.get('master');
 }
 
-const TAB_ROUTES = ['/', '/calendar'];
+const TAB_ROUTES = ['/', '/calendar', '/clients'];
 
-function TabBar({ active }: { active: string }) {
+function TabBar({ active, isOwner }: { active: string; isOwner: boolean }) {
   const navigate = useNavigate();
   return (
     <nav className="tab-bar">
@@ -37,13 +38,24 @@ function TabBar({ active }: { active: string }) {
         <span className="tab-icon">📋</span>
         <span>Запись</span>
       </button>
-      <button
-        className={`tab-bar-item${active === '/calendar' ? ' active' : ''}`}
-        onClick={() => navigate('/calendar')}
-      >
-        <span className="tab-icon">📅</span>
-        <span>Мой календарь</span>
-      </button>
+      {isOwner && (
+        <button
+          className={`tab-bar-item${active === '/calendar' ? ' active' : ''}`}
+          onClick={() => navigate('/calendar')}
+        >
+          <span className="tab-icon">📅</span>
+          <span>Календарь</span>
+        </button>
+      )}
+      {isOwner && (
+        <button
+          className={`tab-bar-item${active === '/clients' ? ' active' : ''}`}
+          onClick={() => navigate('/clients')}
+        >
+          <span className="tab-icon">👥</span>
+          <span>Клиенты</span>
+        </button>
+      )}
     </nav>
   );
 }
@@ -176,9 +188,19 @@ export default function App() {
             )
           }
         />
+        <Route
+          path="/clients"
+          element={
+            isOwner && master && initData ? (
+              <ClientsTable master={master} initData={initData} />
+            ) : (
+              <ClientCalendarPlaceholder />
+            )
+          }
+        />
       </Routes>
 
-      {showTabBar && <TabBar active={location.pathname} />}
+      {showTabBar && <TabBar active={location.pathname} isOwner={isOwner} />}
     </div>
   );
 }

@@ -38,6 +38,19 @@ export interface BookingResult {
   end_time: string;
 }
 
+export interface ClientItem {
+  client_key: string;
+  tg_hash: string | null;
+  pseudo: string;
+  total_bookings: number;
+  last_booking_date: string | null;
+  next_booking_date: string | null;
+  services: string[];
+  note: string | null;
+  can_message: boolean;
+  is_active: boolean;
+}
+
 export interface MasterBookingItem {
   id: number;
   date: string;

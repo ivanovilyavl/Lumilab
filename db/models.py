@@ -195,6 +195,21 @@ class QAItem(Base):
     master: Mapped["Master"] = relationship(back_populates="qa_items")
 
 
+class ClientNote(Base):
+    """Per-master comment on a client. client_key = tg_hash or 'manual:{pseudo}'."""
+    __tablename__ = "client_notes"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    master_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("masters.id", ondelete="CASCADE"), nullable=False)
+    client_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("master_id", "client_key", name="uq_client_note_master_key"),
+    )
+
+
 class Referral(Base):
     __tablename__ = "referrals"
 

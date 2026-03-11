@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { MasterType, SlotType, BookingResult, MasterBookingItem } from '../types';
+import type { MasterType, SlotType, BookingResult, MasterBookingItem, ClientItem } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -95,6 +95,62 @@ export async function createBooking(data: {
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+export function useClients(username: string | null, initData: string | null) {
+  const [clients, setClients] = useState<ClientItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [trigger, setTrigger] = useState(0);
+
+  const refetch = useCallback(() => setTrigger((n) => n + 1), []);
+
+  useEffect(() => {
+    if (!username || !initData) return;
+    setLoading(true);
+    fetch(`${API_BASE}/api/master/${username}/clients`, {
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData },
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data: ClientItem[]) => setClients(data))
+      .catch(() => setClients([]))
+      .finally(() => setLoading(false));
+  }, [username, initData, trigger]);
+
+  return { clients, loading, refetch };
+}
+
+export async function updateClientNote(
+  username: string,
+  initData: string,
+  clientKey: string,
+  note: string | null,
+): Promise<void> {
+  await fetch(
+    `${API_BASE}/api/master/${username}/clients/note?client_key=${encodeURIComponent(clientKey)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData },
+      body: JSON.stringify({ note }),
+    },
+  );
+}
+
+export async function sendClientsMessage(
+  username: string,
+  initData: string,
+  clientKeys: string[],
+  text: string,
+): Promise<{ sent: number; failed: number; no_contact: number }> {
+  const res = await fetch(`${API_BASE}/api/master/${username}/clients/message`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': initData },
+    body: JSON.stringify({ client_keys: clientKeys, text }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Network error' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 export async function createMasterBooking(
