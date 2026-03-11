@@ -71,10 +71,10 @@ async def qa_back(callback: CallbackQuery, db: AsyncSession, master: Master):
 
 
 @router.callback_query(F.data.startswith("qa_view:"))
-async def qa_view(callback: CallbackQuery, db: AsyncSession):
+async def qa_view(callback: CallbackQuery, db: AsyncSession, master: Master):
     qa_id = int(callback.data.split(":")[1])
     item = await db.get(QAItem, qa_id)
-    if not item:
+    if not item or item.master_id != master.id:
         await callback.answer("Вопрос не найден", show_alert=True)
         return
     text = (
@@ -87,10 +87,10 @@ async def qa_view(callback: CallbackQuery, db: AsyncSession):
 
 
 @router.callback_query(F.data.startswith("qa_toggle:"))
-async def qa_toggle(callback: CallbackQuery, db: AsyncSession):
+async def qa_toggle(callback: CallbackQuery, db: AsyncSession, master: Master):
     qa_id = int(callback.data.split(":")[1])
     item = await db.get(QAItem, qa_id)
-    if not item:
+    if not item or item.master_id != master.id:
         await callback.answer("Вопрос не найден", show_alert=True)
         return
     item.is_active = not item.is_active
@@ -109,7 +109,7 @@ async def qa_toggle(callback: CallbackQuery, db: AsyncSession):
 async def qa_delete(callback: CallbackQuery, db: AsyncSession, master: Master):
     qa_id = int(callback.data.split(":")[1])
     item = await db.get(QAItem, qa_id)
-    if item:
+    if item and item.master_id == master.id:
         await db.delete(item)
         await db.commit()
     await callback.answer("Вопрос удалён")
@@ -141,6 +141,9 @@ async def add_qa_answer(message: Message, state: FSMContext, db: AsyncSession, m
     answer = message.text.strip()
     if len(answer) < 1:
         await message.answer("Ответ не может быть пустым:")
+        return
+    if len(answer) > 1000:
+        await message.answer("Ответ слишком длинный — максимум 1000 символов:")
         return
     data = await state.get_data()
     item = QAItem(

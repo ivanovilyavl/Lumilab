@@ -58,14 +58,17 @@ async def _render_pending(db: AsyncSession, master: Master) -> tuple[str, Inline
     )
     bookings = list(result.scalars().all())
 
+    MAX_PENDING = 10
     if not bookings:
         text = "📖 <b>Записи</b>\n\n⏳ Ожидающих подтверждения записей нет."
     else:
-        lines = [format_booking(b, master.currency or "RUB") for b in bookings]
-        text = f"⏳ <b>Ожидают подтверждения ({len(bookings)}):</b>\n\n" + "\n".join(lines)
+        shown = bookings[:MAX_PENDING]
+        lines = [format_booking(b, master.currency or "RUB") for b in shown]
+        suffix = f"\n<i>...и ещё {len(bookings) - MAX_PENDING}</i>" if len(bookings) > MAX_PENDING else ""
+        text = f"⏳ <b>Ожидают подтверждения ({len(bookings)}):</b>\n\n" + "\n".join(lines) + suffix
 
     buttons = []
-    for b in bookings[:10]:
+    for b in bookings[:MAX_PENDING]:
         buttons.append([
             InlineKeyboardButton(text=f"✅ {b.client_pseudo[:20]}", callback_data=f"bk_confirm:{b.id}"),
             InlineKeyboardButton(text="❌", callback_data=f"bk_reject:{b.id}"),
@@ -524,10 +527,12 @@ async def _find_client_tg_id(booking: Booking) -> int | None:
         from redis.asyncio import from_url
         from shared.config import settings
         redis = from_url(settings.redis_url)
-        tg_id_bytes = await redis.get(f"tghash:{booking.client_tg_hash}")
-        await redis.aclose()
-        if tg_id_bytes:
-            return int(tg_id_bytes)
+        try:
+            tg_id_bytes = await redis.get(f"tghash:{booking.client_tg_hash}")
+            if tg_id_bytes:
+                return int(tg_id_bytes)
+        finally:
+            await redis.aclose()
     except Exception as e:
         logger.warning(f"Failed to lookup client tg_id: {e}")
     return None

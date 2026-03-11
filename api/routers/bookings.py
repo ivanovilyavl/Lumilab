@@ -53,8 +53,13 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
     except (ValueError, IndexError):
         raise HTTPException(400, "Invalid date or time format")
 
-    # Calculate end time
+    if booking_date < date.today():
+        raise HTTPException(400, "Cannot book past dates")
+
+    # Calculate end time (service must not cross midnight)
     total_min = start_time.hour * 60 + start_time.minute + service.duration_min
+    if total_min >= 24 * 60:
+        raise HTTPException(400, "Service end time exceeds midnight — choose an earlier slot")
     end_time = time(total_min // 60, total_min % 60)
 
     # Check for double booking with row-level locking (SELECT FOR UPDATE)

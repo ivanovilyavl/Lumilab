@@ -87,7 +87,7 @@ async def svc_back(callback: CallbackQuery, db: AsyncSession, master: Master):
 async def svc_view(callback: CallbackQuery, db: AsyncSession, master: Master):
     service_id = int(callback.data.split(":")[1])
     service = await db.get(Service, service_id)
-    if not service:
+    if not service or service.master_id != master.id:
         await callback.answer("Услуга не найдена", show_alert=True)
         return
     currency = master.currency or "RUB"
@@ -106,7 +106,7 @@ async def svc_view(callback: CallbackQuery, db: AsyncSession, master: Master):
 async def svc_toggle(callback: CallbackQuery, db: AsyncSession, master: Master):
     service_id = int(callback.data.split(":")[1])
     service = await db.get(Service, service_id)
-    if not service:
+    if not service or service.master_id != master.id:
         await callback.answer("Услуга не найдена", show_alert=True)
         return
     service.is_active = not service.is_active
@@ -128,7 +128,7 @@ async def svc_toggle(callback: CallbackQuery, db: AsyncSession, master: Master):
 async def svc_edit_start(callback: CallbackQuery, state: FSMContext, db: AsyncSession, master: Master):
     service_id = int(callback.data.split(":")[1])
     service = await db.get(Service, service_id)
-    if not service:
+    if not service or service.master_id != master.id:
         await callback.answer("Услуга не найдена", show_alert=True)
         return
     currency = master.currency or "RUB"
@@ -225,7 +225,7 @@ async def svc_edit_value(message: Message, state: FSMContext, db: AsyncSession):
 async def svc_delete(callback: CallbackQuery, db: AsyncSession, master: Master):
     service_id = int(callback.data.split(":")[1])
     service = await db.get(Service, service_id)
-    if service:
+    if service and service.master_id == master.id:
         await db.delete(service)
         await db.commit()
     await callback.answer("Услуга удалена")

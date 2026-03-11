@@ -217,11 +217,13 @@ async def _auto_cancel_pending():
                 twelve_h_deadline = created_at + timedelta(hours=12)
                 two_h_before = booking_dt - timedelta(hours=2)
 
-                # Determine actual cancel time
-                if twelve_h_deadline > two_h_before:
-                    cancel_at = two_h_before
-                else:
-                    cancel_at = twelve_h_deadline
+                # If the appointment is less than 2 hours away from now, skip auto-cancel:
+                # the master still has time to confirm manually before the appointment starts.
+                if now >= two_h_before:
+                    continue
+
+                # Determine actual cancel time: whichever comes first
+                cancel_at = min(twelve_h_deadline, two_h_before)
 
                 if now < cancel_at:
                     continue  # Not time yet
@@ -281,7 +283,7 @@ async def _cleanup_old_messages():
         )
         messages = list(result.scalars().all())
         for msg in messages:
-            await db.delete(msg)
+            db.delete(msg)
         await db.commit()
         if messages:
             logger.info(f"Cleanup: deleted {len(messages)} old bot messages")
