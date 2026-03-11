@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import type { MasterItem } from '../types';
 import { useMasters } from '../hooks/useApi';
 
 interface Props {

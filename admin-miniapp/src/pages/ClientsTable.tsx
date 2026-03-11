@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import type { AdminClientItem } from '../types';
 import { useAdminClients } from '../hooks/useApi';
 
 interface Props {
