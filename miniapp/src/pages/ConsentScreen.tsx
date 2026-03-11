@@ -15,7 +15,7 @@ export default function ConsentScreen({ master }: Props) {
   const T = useT(master.language);
 
   if (!serviceId || !date || !time) {
-    return <div className="error">Параметры не указаны</div>;
+    return <div className="error">{T('error.missing_params')}</div>;
   }
 
   const masterName = master.display_name ?? 'мастером';

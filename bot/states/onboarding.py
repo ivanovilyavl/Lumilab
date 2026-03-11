@@ -23,6 +23,11 @@ class AddServiceStates(StatesGroup):
     DURATION = State()
 
 
+class EditServiceStates(StatesGroup):
+    FIELD = State()   # which field: name / price / duration
+    VALUE = State()   # waiting for new value
+
+
 class EditScheduleStates(StatesGroup):
     SELECT_DAY = State()
     START_TIME = State()

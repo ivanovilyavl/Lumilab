@@ -5,7 +5,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot.states.onboarding import AddServiceStates
+from bot.states.onboarding import AddServiceStates, EditServiceStates
 from db.models import Master, Service
 from shared.config import settings
 
@@ -123,6 +123,103 @@ async def svc_toggle(callback: CallbackQuery, db: AsyncSession, master: Master):
         f"Статус: {'✅ Активна' if service.is_active else '🙈 Скрыта'}"
     )
     await callback.message.edit_text(text, reply_markup=service_actions_kb(service.id, service.is_active))
+
+
+@router.callback_query(F.data.startswith("svc_edit:"))
+async def svc_edit_start(callback: CallbackQuery, state: FSMContext, db: AsyncSession, master: Master):
+    service_id = int(callback.data.split(":")[1])
+    service = await db.get(Service, service_id)
+    if not service:
+        await callback.answer("Услуга не найдена", show_alert=True)
+        return
+    currency = master.currency or "RUB"
+    await state.update_data(service_id=service_id, currency=currency)
+    await callback.message.answer(
+        f"✏️ Редактирование: <b>{service.name}</b>\n\n"
+        f"Что изменить?\n"
+        f"• /svc_name — название (сейчас: {service.name})\n"
+        f"• /svc_price — цена (сейчас: {fmt_price(service.price, currency)})\n"
+        f"• /svc_duration — длительность (сейчас: {service.duration_min} мин)\n\n"
+        "Отправьте одну из команд выше или /cancel для отмены."
+    )
+    await state.set_state(EditServiceStates.FIELD)
+    await callback.answer()
+
+
+@router.message(EditServiceStates.FIELD, F.text.in_({"/svc_name", "/svc_price", "/svc_duration"}))
+async def svc_edit_field(message: Message, state: FSMContext):
+    field_map = {"/svc_name": "name", "/svc_price": "price", "/svc_duration": "duration"}
+    field = field_map[message.text]
+    prompts = {
+        "name": "Введите новое <b>название</b> услуги (1–128 символов):",
+        "price": "Введите новую <b>цену</b> (число от 0 до 1 000 000) или /skip для «по договорённости»:",
+        "duration": "Введите новую <b>длительность</b> в минутах (5–480):",
+    }
+    await state.update_data(edit_field=field)
+    await message.answer(prompts[field])
+    await state.set_state(EditServiceStates.VALUE)
+
+
+@router.message(EditServiceStates.FIELD, F.text == "/cancel")
+async def svc_edit_cancel(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Отменено.")
+
+
+@router.message(EditServiceStates.VALUE)
+async def svc_edit_value(message: Message, state: FSMContext, db: AsyncSession):
+    data = await state.get_data()
+    service_id = data["service_id"]
+    field = data["edit_field"]
+    currency = data.get("currency", "RUB")
+    text = (message.text or "").strip()
+
+    service = await db.get(Service, service_id)
+    if not service:
+        await state.clear()
+        await message.answer("Услуга не найдена.")
+        return
+
+    if field == "name":
+        if len(text) < 1 or len(text) > 128:
+            await message.answer("Название — от 1 до 128 символов. Попробуйте ещё раз:")
+            return
+        service.name = text
+        await db.commit()
+        await state.clear()
+        await message.answer(f"✅ Название обновлено: <b>{text}</b>")
+
+    elif field == "price":
+        if text == "/skip":
+            service.price = None
+            await db.commit()
+            await state.clear()
+            await message.answer("✅ Цена обновлена: <b>по договорённости</b>")
+            return
+        try:
+            price = int(text)
+            if price < 0 or price > 1_000_000:
+                raise ValueError
+        except ValueError:
+            await message.answer("Введите цену числом от 0 до 1 000 000 или /skip:")
+            return
+        service.price = price
+        await db.commit()
+        await state.clear()
+        await message.answer(f"✅ Цена обновлена: <b>{fmt_price(price, currency)}</b>")
+
+    elif field == "duration":
+        try:
+            duration = int(text)
+            if duration < 5 or duration > 480:
+                raise ValueError
+        except ValueError:
+            await message.answer("Длительность — от 5 до 480 минут. Попробуйте ещё раз:")
+            return
+        service.duration_min = duration
+        await db.commit()
+        await state.clear()
+        await message.answer(f"✅ Длительность обновлена: <b>{duration} мин</b>")
 
 
 @router.callback_query(F.data.startswith("svc_del:"))

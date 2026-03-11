@@ -193,7 +193,7 @@ async def cancel_profile_edit(message: Message, state: FSMContext):
 async def cb_set_currency(callback, master: Master | None):
     if not master:
         return
-    from shared.i18n import t, SUPPORTED_CURRENCIES
+    from shared.i18n import t
     lang = master.language or "ru"
     await callback.message.answer(
         t(lang, "currency_select"),

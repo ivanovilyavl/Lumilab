@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { MasterBookingItem, MasterType } from '../types';
 import { createMasterBooking } from '../hooks/useApi';
-import { fmtPrice } from '../i18n';
+import { fmtPrice, useT } from '../i18n';
 
 const DAY_NAMES = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTH_NAMES = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -18,6 +18,7 @@ interface Props {
 }
 
 export default function MasterCalendar({ bookings, master, initData, onBookingCreated }: Props) {
+  const T = useT(master.language);
   const today = toYMD(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [showModal, setShowModal] = useState(false);
@@ -174,7 +175,7 @@ export default function MasterCalendar({ bookings, master, initData, onBookingCr
                 >
                   {master.services.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} · {s.duration_min} мин · {fmtPrice(s.price, master.currency, (k) => k === 'price.by_agreement' ? 'по договорённости' : k)}
+                      {s.name} · {s.duration_min} мин · {fmtPrice(s.price, master.currency, T)}
                     </option>
                   ))}
                 </select>

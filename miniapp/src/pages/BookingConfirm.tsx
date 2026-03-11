@@ -23,7 +23,7 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
   const service = master.services.find((s) => s.id === Number(serviceId));
 
   if (!service || !date || !time) {
-    return <div className="error">Параметры не указаны</div>;
+    return <div className="error">{T('error.missing_params')}</div>;
   }
 
   const locale = T('locale');
