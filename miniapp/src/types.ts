@@ -19,6 +19,7 @@ export interface MasterType {
   bio: string | null;
   photo_file_id: string | null;
   niche: string | null;
+  language: string;
   accepting_bookings: boolean;
   services: ServiceType[];
   qa_items: QAItemType[];

@@ -16,9 +16,10 @@ def fmt_price(price: int | None) -> str:
     return f"{price} ₽" if price is not None else "по договорённости"
 
 
-def price_ask_kb() -> InlineKeyboardMarkup:
+def price_ask_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    from shared.i18n import t as _t
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Пропустить (цена по договорённости)", callback_data="skip_price"),
+        InlineKeyboardButton(text=_t(lang, "skip_price_btn"), callback_data="skip_price"),
     ]])
 
 

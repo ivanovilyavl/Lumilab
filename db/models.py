@@ -33,6 +33,7 @@ class Master(Base):
     photo_file_id: Mapped[str | None] = mapped_column(String(256))
     niche: Mapped[str | None] = mapped_column(String(64))
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Moscow")
+    language: Mapped[str] = mapped_column(String(8), default="ru")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_onboarded: Mapped[bool] = mapped_column(Boolean, default=False)
 

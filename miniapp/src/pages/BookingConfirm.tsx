@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createBooking } from '../hooks/useApi';
 import type { MasterType } from '../types';
+import { useT } from '../i18n';
 
 interface Props {
   master: MasterType;
@@ -17,6 +18,7 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
   const time = params.get('time');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const T = useT(master.language);
 
   const service = master.services.find((s) => s.id === Number(serviceId));
 
@@ -24,12 +26,17 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
     return <div className="error">Параметры не указаны</div>;
   }
 
+  const locale = T('locale');
   const dateObj = new Date(date + 'T00:00:00');
-  const displayDate = dateObj.toLocaleDateString('ru-RU', {
+  const displayDate = dateObj.toLocaleDateString(locale, {
     day: 'numeric',
     month: 'long',
     weekday: 'short',
   });
+
+  const priceDisplay = service.price !== null
+    ? `${service.price} ₽`
+    : T('price.by_agreement');
 
   // Get Telegram user id if available
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -60,43 +67,43 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
         className="back-link"
         onClick={() => navigate(`/contact?id=${serviceId}&date=${date}&time=${time}`)}
       >
-        ← Назад
+        {T('back')}
       </button>
 
-      <div className="section-title">Подтверждение записи</div>
+      <div className="section-title">{T('confirm.title')}</div>
 
       <div className="summary-card">
         <div className="summary-row">
-          <span className="summary-label">Мастер</span>
+          <span className="summary-label">{T('confirm.master')}</span>
           <span className="summary-value">{master.display_name}</span>
         </div>
         <div className="summary-row">
-          <span className="summary-label">Услуга</span>
+          <span className="summary-label">{T('confirm.service')}</span>
           <span className="summary-value">{service.name}</span>
         </div>
         <div className="summary-row">
-          <span className="summary-label">Дата</span>
+          <span className="summary-label">{T('confirm.date')}</span>
           <span className="summary-value">{displayDate}</span>
         </div>
         <div className="summary-row">
-          <span className="summary-label">Время</span>
+          <span className="summary-label">{T('confirm.time')}</span>
           <span className="summary-value">{time}</span>
         </div>
         <div className="summary-row">
-          <span className="summary-label">Длительность</span>
-          <span className="summary-value">{service.duration_min} мин</span>
+          <span className="summary-label">{T('confirm.duration')}</span>
+          <span className="summary-value">{service.duration_min} {T('min')}</span>
         </div>
         <div className="summary-row">
-          <span className="summary-label">Стоимость</span>
-          <span className="summary-value">{service.price !== null ? `${service.price} ₽` : 'по договорённости'}</span>
+          <span className="summary-label">{T('confirm.price')}</span>
+          <span className="summary-value">{priceDisplay}</span>
         </div>
         <div className="summary-row">
-          <span className="summary-label">Ваше имя</span>
+          <span className="summary-label">{T('confirm.name')}</span>
           <span className="summary-value">{clientName}</span>
         </div>
         {clientPhone && (
           <div className="summary-row">
-            <span className="summary-label">Телефон</span>
+            <span className="summary-label">{T('confirm.phone')}</span>
             <span className="summary-value">{clientPhone}</span>
           </div>
         )}
@@ -109,7 +116,7 @@ export default function BookingConfirm({ master, clientName, clientPhone }: Prop
         disabled={submitting}
         onClick={handleConfirm}
       >
-        {submitting ? 'Отправляем...' : 'Подтвердить запись'}
+        {submitting ? T('confirm.sending') : T('confirm.btn')}
       </button>
     </div>
   );

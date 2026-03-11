@@ -3,6 +3,7 @@ export interface MasterItem {
   username: string;
   display_name: string | null;
   niche: string | null;
+  language: string;
   subscription_status: string; // "trial" | "active" | "inactive" | "expired"
   is_active: boolean;
   is_onboarded: boolean;

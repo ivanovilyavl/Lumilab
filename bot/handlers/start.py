@@ -13,6 +13,7 @@ from bot.keyboards.common import niche_kb, schedule_days_kb, slot_step_kb, main_
 from bot.states.onboarding import OnboardingStates
 from db.models import Master, Service, ScheduleTemplate, ScheduleOverride, Event, Referral
 from shared.config import settings
+from shared.i18n import t, LANG_LABELS
 from shared.utils import generate_referral_code
 
 router = Router()
@@ -59,6 +60,13 @@ def consent_kb(action: str = "new") -> InlineKeyboardMarkup:
     label = "✅ Принять и начать" if action == "new" else "✅ Принять и продолжить"
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=label, callback_data=f"consent:{action}")
+    ]])
+
+
+def language_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=label, callback_data=f"setlang:{code}")
+        for code, label in LANG_LABELS.items()
     ]])
 
 
@@ -140,9 +148,22 @@ async def process_consent(callback: CallbackQuery, state: FSMContext):
         consent_at=datetime.utcnow().isoformat(),
     )
     await callback.message.edit_text(
-        "Отлично! Давайте настроим ваш профиль.\n\n"
-        "Как вас называть клиентам?\n"
-        "(Можно имя, название студии или любой псевдоним)"
+        "🌍 Выберите язык интерфейса и уведомлений:\n"
+        "Select interface language / Seleccione el idioma:",
+        reply_markup=language_kb(),
+    )
+    await state.set_state(OnboardingStates.LANGUAGE)
+    await callback.answer()
+
+
+# ── Шаг 0b: Язык ────────────────────────────────────────────────
+
+@router.callback_query(OnboardingStates.LANGUAGE, F.data.startswith("setlang:"))
+async def process_language(callback: CallbackQuery, state: FSMContext):
+    lang = callback.data.split(":")[1]
+    await state.update_data(language=lang)
+    await callback.message.edit_text(
+        f"{t(lang, 'lang_chosen')}\n\n{t(lang, 'enter_name')}"
     )
     await state.set_state(OnboardingStates.NAME)
     await callback.answer()
@@ -153,14 +174,13 @@ async def process_consent(callback: CallbackQuery, state: FSMContext):
 @router.message(OnboardingStates.NAME)
 async def process_name(message: Message, state: FSMContext):
     name = message.text.strip()
+    data = await state.get_data()
+    lang = data.get("language", "ru")
     if len(name) < 2 or len(name) > 64:
-        await message.answer("Имя должно быть от 2 до 64 символов. Попробуйте ещё раз:")
+        await message.answer(t(lang, "name_error"))
         return
     await state.update_data(display_name=name)
-    await message.answer(
-        f"Отлично, {name}! 👋\n\nВыберите вашу сферу деятельности:",
-        reply_markup=niche_kb(),
-    )
+    await message.answer(t(lang, "enter_niche", name=name), reply_markup=niche_kb())
     await state.set_state(OnboardingStates.NICHE)
 
 
@@ -170,11 +190,9 @@ async def process_name(message: Message, state: FSMContext):
 async def process_niche(callback: CallbackQuery, state: FSMContext):
     niche = callback.data.split(":")[1]
     await state.update_data(niche=niche)
-    await callback.message.edit_text(
-        "Теперь добавим вашу первую услугу.\n\n"
-        "Введите <b>название услуги</b>:\n"
-        "(например: Стрижка, Маникюр, Урок английского)"
-    )
+    data = await state.get_data()
+    lang = data.get("language", "ru")
+    await callback.message.edit_text(t(lang, "enter_service_name"))
     await state.set_state(OnboardingStates.SERVICE_NAME)
     await callback.answer()
 
@@ -184,63 +202,56 @@ async def process_niche(callback: CallbackQuery, state: FSMContext):
 @router.message(OnboardingStates.SERVICE_NAME)
 async def process_service_name(message: Message, state: FSMContext):
     name = message.text.strip()
+    data = await state.get_data()
+    lang = data.get("language", "ru")
     if len(name) < 1 or len(name) > 128:
-        await message.answer("Название услуги — от 1 до 128 символов. Попробуйте ещё раз:")
+        await message.answer(t(lang, "service_name_error"))
         return
     await state.update_data(service_name=name)
-    await message.answer(
-        f"Услуга: <b>{name}</b>\n\n"
-        "Укажите <b>цену в рублях</b> или пропустите, если цена индивидуальная:",
-        reply_markup=price_ask_kb(),
-    )
+    await message.answer(t(lang, "enter_price", name=name), reply_markup=price_ask_kb(lang))
     await state.set_state(OnboardingStates.SERVICE_PRICE)
 
 
 @router.message(OnboardingStates.SERVICE_PRICE)
 async def process_service_price(message: Message, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("language", "ru")
     try:
         price = int(message.text.strip())
         if price < 0 or price > 1_000_000:
             raise ValueError
     except ValueError:
-        await message.answer("Введите цену числом от 0 до 1 000 000:", reply_markup=price_ask_kb())
+        await message.answer(t(lang, "price_error"), reply_markup=price_ask_kb(lang))
         return
     await state.update_data(service_price=price)
-    await message.answer(
-        f"Цена: <b>{price} ₽</b>\n\n"
-        "Укажите <b>длительность в минутах</b> (только число):\n"
-        "(например: 30, 60, 90)"
-    )
+    price_display = f"{price} ₽" if lang == "ru" else str(price)
+    await message.answer(t(lang, "price_set", price=price_display))
     await state.set_state(OnboardingStates.SERVICE_DURATION)
 
 
 @router.callback_query(OnboardingStates.SERVICE_PRICE, F.data == "skip_price")
 async def process_service_price_skip(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("language", "ru")
     await state.update_data(service_price=None)
-    await callback.message.edit_text(
-        "Цена: <b>по договорённости</b>\n\n"
-        "Укажите <b>длительность в минутах</b> (только число):\n"
-        "(например: 30, 60, 90)"
-    )
+    await callback.message.edit_text(t(lang, "price_skipped"))
     await state.set_state(OnboardingStates.SERVICE_DURATION)
     await callback.answer()
 
 
 @router.message(OnboardingStates.SERVICE_DURATION)
 async def process_service_duration(message: Message, state: FSMContext):
+    data = await state.get_data()
+    lang = data.get("language", "ru")
     try:
         duration = int(message.text.strip())
         if duration < 5 or duration > 480:
             raise ValueError
     except ValueError:
-        await message.answer("Введите длительность числом от 5 до 480 минут:")
+        await message.answer(t(lang, "duration_error"))
         return
     await state.update_data(service_duration=duration)
-    await message.answer(
-        "Отлично! Теперь настроим расписание.\n\n"
-        "Выберите <b>рабочие дни</b> (нажимайте на дни, потом «Готово»):",
-        reply_markup=schedule_days_kb(),
-    )
+    await message.answer(t(lang, "enter_schedule_days"), reply_markup=schedule_days_kb())
     await state.set_state(OnboardingStates.SCHEDULE_DAYS)
 
 
@@ -263,14 +274,12 @@ async def toggle_day(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(OnboardingStates.SCHEDULE_DAYS, F.data == "days_done")
 async def days_done(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
+    lang = data.get("language", "ru")
     selected = data.get("selected_days", [])
     if not selected:
-        await callback.answer("Выберите хотя бы один рабочий день!", show_alert=True)
+        await callback.answer(t(lang, "schedule_days_error"), show_alert=True)
         return
-    await callback.message.edit_text(
-        "Во сколько начинается ваш рабочий день?\n\n"
-        "Введите <b>время начала</b> (например: 9:00 или 10:00):"
-    )
+    await callback.message.edit_text(t(lang, "enter_schedule_start"))
     await state.set_state(OnboardingStates.SCHEDULE_START)
     await callback.answer()
 
@@ -278,6 +287,8 @@ async def days_done(callback: CallbackQuery, state: FSMContext):
 @router.message(OnboardingStates.SCHEDULE_START)
 async def process_schedule_start(message: Message, state: FSMContext):
     time_str = message.text.strip()
+    data = await state.get_data()
+    lang = data.get("language", "ru")
     try:
         parts = time_str.replace(".", ":").split(":")
         hour = int(parts[0])
@@ -285,20 +296,18 @@ async def process_schedule_start(message: Message, state: FSMContext):
         if not (0 <= hour <= 23 and 0 <= minute <= 59):
             raise ValueError
     except (ValueError, IndexError):
-        await message.answer("Введите время в формате ЧЧ:ММ (например: 9:00):")
+        await message.answer(t(lang, "schedule_start_error"))
         return
     await state.update_data(schedule_start_h=hour, schedule_start_m=minute)
-    await message.answer(
-        f"Начало: <b>{hour:02d}:{minute:02d}</b>\n\n"
-        "Во сколько заканчивается рабочий день?\n"
-        "Введите <b>время конца</b> (например: 18:00 или 20:00):"
-    )
+    await message.answer(t(lang, "enter_schedule_end", start=f"{hour:02d}:{minute:02d}"))
     await state.set_state(OnboardingStates.SCHEDULE_END)
 
 
 @router.message(OnboardingStates.SCHEDULE_END)
 async def process_schedule_end(message: Message, state: FSMContext):
     time_str = message.text.strip()
+    data = await state.get_data()
+    lang = data.get("language", "ru")
     try:
         parts = time_str.replace(".", ":").split(":")
         hour = int(parts[0])
@@ -306,22 +315,19 @@ async def process_schedule_end(message: Message, state: FSMContext):
         if not (0 <= hour <= 23 and 0 <= minute <= 59):
             raise ValueError
     except (ValueError, IndexError):
-        await message.answer("Введите время в формате ЧЧ:ММ (например: 18:00):")
+        await message.answer(t(lang, "schedule_end_error"))
         return
 
-    data = await state.get_data()
     start_total = data["schedule_start_h"] * 60 + data["schedule_start_m"]
     end_total = hour * 60 + minute
     if end_total <= start_total:
-        await message.answer("Время конца должно быть позже времени начала. Попробуйте ещё раз:")
+        await message.answer(t(lang, "schedule_end_conflict"))
         return
 
     await state.update_data(schedule_end_h=hour, schedule_end_m=minute)
-    await message.answer(
-        f"Конец: <b>{hour:02d}:{minute:02d}</b>\n\n"
-        "Выберите <b>шаг записи</b> (длительность одного слота):",
-        reply_markup=slot_step_kb(),
-    )
+    start_str = f"{data['schedule_start_h']:02d}:{data['schedule_start_m']:02d}"
+    end_str = f"{hour:02d}:{minute:02d}"
+    await message.answer(t(lang, "enter_slot_step", start=start_str, end=end_str), reply_markup=slot_step_kb())
     await state.set_state(OnboardingStates.SCHEDULE_STEP)
 
 
@@ -348,6 +354,7 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
         master.is_onboarded = True
         master.consent_given = True
         master.consent_at = consent_at
+        master.language = data.get("language", "ru")
         await db.flush()
     else:
         # Create new master
@@ -362,6 +369,7 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
             is_onboarded=True,
             consent_given=True,
             consent_at=consent_at,
+            language=data.get("language", "ru"),
             subscription_status="trial",
             trial_ends_at=now + timedelta(days=settings.trial_days),
             referrer_id=data.get("referrer_id"),
@@ -452,6 +460,35 @@ async def process_step(callback: CallbackQuery, state: FSMContext, db: AsyncSess
         "Если среди ваших коллег есть те, кому это тоже может помочь — "
         "поделитесь ботом @plotinahelperbot. Будем рады 🤝"
     )
+
+
+# ── Language change ──────────────────────────────────────────────
+
+@router.message(Command("language"))
+async def cmd_language(message: Message, master: Master | None):
+    if not master:
+        await message.answer("Сначала завершите настройку профиля через /start")
+        return
+    await message.answer(
+        "🌍 Выберите язык интерфейса и уведомлений:\n"
+        "Select interface language / Seleccione el idioma:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text=label, callback_data=f"changelang:{code}")
+            for code, label in LANG_LABELS.items()
+        ]]),
+    )
+
+
+@router.callback_query(F.data.startswith("changelang:"))
+async def process_change_language(callback: CallbackQuery, db: AsyncSession, master: Master | None):
+    if not master:
+        await callback.answer("Мастер не найден", show_alert=True)
+        return
+    lang = callback.data.split(":")[1]
+    master.language = lang
+    await db.commit()
+    await callback.message.edit_text(t(lang, "lang_chosen"))
+    await callback.answer()
 
 
 # ── Main menu refresh ────────────────────────────────────────────

@@ -1,18 +1,21 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useT } from '../i18n';
 
 interface Props {
+  lang: string;
   clientName: string;
   clientPhone: string;
   onChangeName: (v: string) => void;
   onChangePhone: (v: string) => void;
 }
 
-export default function ContactForm({ clientName, clientPhone, onChangeName, onChangePhone }: Props) {
+export default function ContactForm({ lang, clientName, clientPhone, onChangeName, onChangePhone }: Props) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const serviceId = params.get('id');
   const date = params.get('date');
   const time = params.get('time');
+  const T = useT(lang);
 
   const canProceed = clientName.trim().length >= 2;
 
@@ -22,17 +25,17 @@ export default function ContactForm({ clientName, clientPhone, onChangeName, onC
         className="back-link"
         onClick={() => navigate(`/consent?id=${serviceId}&date=${date}&time=${time}`)}
       >
-        ← Назад
+        {T('back')}
       </button>
 
-      <div className="section-title">Ваши контакты</div>
+      <div className="section-title">{T('contact.title')}</div>
 
       <div className="form-group">
-        <label className="form-label">Имя *</label>
+        <label className="form-label">{T('contact.name_label')}</label>
         <input
           className="form-input"
           type="text"
-          placeholder="Как к вам обращаться?"
+          placeholder={T('contact.name_placeholder')}
           value={clientName}
           onChange={(e) => onChangeName(e.target.value)}
           maxLength={128}
@@ -40,11 +43,11 @@ export default function ContactForm({ clientName, clientPhone, onChangeName, onC
       </div>
 
       <div className="form-group">
-        <label className="form-label">Телефон (необязательно)</label>
+        <label className="form-label">{T('contact.phone_label')}</label>
         <input
           className="form-input"
           type="tel"
-          placeholder="+7 (999) 123-45-67"
+          placeholder={T('contact.phone_placeholder')}
           value={clientPhone}
           onChange={(e) => onChangePhone(e.target.value)}
           maxLength={32}
@@ -56,7 +59,7 @@ export default function ContactForm({ clientName, clientPhone, onChangeName, onC
         disabled={!canProceed}
         onClick={() => navigate(`/confirm?id=${serviceId}&date=${date}&time=${time}`)}
       >
-        Далее
+        {T('contact.btn')}
       </button>
     </div>
   );

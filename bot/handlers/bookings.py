@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from bot.handlers.services import fmt_price
+from shared.i18n import t
 from bot.keyboards.common import (
     booking_tabs_kb,
     client_cancel_confirm_kb,
@@ -198,17 +199,23 @@ async def bk_confirm(callback: CallbackQuery, db: AsyncSession, master: Master):
     await db.commit()
     await callback.answer("✅ Запись подтверждена!")
 
+    lang = getattr(master, "language", "ru") or "ru"
+    min_unit = t(lang, "min_unit")
+    price_str = fmt_price(service.price) if service else ""
     service_line = (
-        f"💅 {service.name} · {service.duration_min} мин · {fmt_price(service.price)}\n"
+        t(lang, "service_line",
+          service=service.name,
+          duration=f"{service.duration_min} {min_unit}",
+          price=price_str)
         if service else ""
     )
     await _notify_client(
         callback.bot, booking, db,
-        f"✅ <b>Ваша запись подтверждена!</b>\n\n"
-        f"👤 {master.display_name or 'Мастер'}\n"
-        f"{service_line}"
-        f"📅 {booking.booking_date.strftime('%d.%m.%Y')} в {booking.start_time.strftime('%H:%M')}\n\n"
-        f"🔔 Мы напомним вам за 24 ч и за 2 ч до визита.",
+        t(lang, "booking_confirmed_client",
+          master=master.display_name or "Мастер",
+          service_line=service_line,
+          date=booking.booking_date.strftime("%d.%m.%Y"),
+          time=booking.start_time.strftime("%H:%M")),
     )
 
     await callback.message.edit_text(

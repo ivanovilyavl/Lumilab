@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.deps import get_db
 from db.models import Booking, Event, Master, Service
 from shared.config import settings
+from shared.i18n import t
 from shared.pseudo import hash_client_id, get_or_create_pseudo, generate_pseudo
 
 router = APIRouter(prefix="/api", tags=["bookings"])
@@ -129,25 +130,32 @@ async def create_booking(data: BookingCreate, db: AsyncSession = Depends(get_db)
         from bot.keyboards.common import booking_notification_kb
 
         bot = Bot(token=settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-        price_str = f"{service.price} ₽" if service.price is not None else "по договорённости"
+        lang = getattr(master, "language", "ru") or "ru"
+        min_unit = t(lang, "min_unit")
+        price_str = f"{service.price} ₽" if service.price is not None else t(lang, "price_by_agreement")
 
         await bot.send_message(
             master.telegram_id,
-            f"📅 Новая запись!\n\n"
-            f"👤 {client_pseudo}\n"
-            f"💅 {service.name} · {service.duration_min} мин · {price_str}\n"
-            f"📆 {booking_date.strftime('%d.%m.%Y')} в {start_time.strftime('%H:%M')}",
+            t(lang, "new_booking_master",
+              pseudo=client_pseudo,
+              service=service.name,
+              duration=f"{service.duration_min} {min_unit}",
+              price=price_str,
+              date=booking_date.strftime("%d.%m.%Y"),
+              time=start_time.strftime("%H:%M")),
             reply_markup=booking_notification_kb(booking.id),
         )
 
         if data.client_telegram_id:
             await bot.send_message(
                 data.client_telegram_id,
-                f"📋 <b>Заявка принята!</b>\n\n"
-                f"👤 {master.display_name or 'Мастер'}\n"
-                f"💅 {service.name} · {service.duration_min} мин · {price_str}\n"
-                f"📆 {booking_date.strftime('%d.%m.%Y')} в {start_time.strftime('%H:%M')}\n\n"
-                f"⏳ Ожидайте подтверждения от мастера.",
+                t(lang, "booking_created_client",
+                  master=master.display_name or "Мастер",
+                  service=service.name,
+                  duration=f"{service.duration_min} {min_unit}",
+                  price=price_str,
+                  date=booking_date.strftime("%d.%m.%Y"),
+                  time=start_time.strftime("%H:%M")),
             )
 
         await bot.session.close()

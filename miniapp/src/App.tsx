@@ -160,6 +160,7 @@ export default function App() {
           path="/contact"
           element={
             <ContactForm
+              lang={master.language}
               clientName={clientName}
               clientPhone={clientPhone}
               onChangeName={setClientName}

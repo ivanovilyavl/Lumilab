@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from worker.celery_app import app
 from db.models import Booking, Master, Service
+from shared.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +71,18 @@ async def _send_reminder_24h():
             client_tg_id = await _find_client_tg_id(b)
             if client_tg_id:
                 try:
+                    lang = getattr(b.master, "language", "ru") or "ru"
+                    min_unit = t(lang, "min_unit")
+                    price_str = (f"{b.service.price} ₽" if b.service.price is not None
+                                 else t(lang, "price_by_agreement"))
                     await bot.send_message(
                         client_tg_id,
-                        f"⏰ Напоминание о записи\n\n"
-                        f"👤 {b.master.display_name or 'Мастер'}\n"
-                        f"💅 {b.service.name} · {b.service.duration_min} мин"
-                        + (f" · {b.service.price} ₽" if b.service.price is not None else " · по договорённости")
-                        + f"\n📆 Завтра в {b.start_time.strftime('%H:%M')}",
+                        t(lang, "reminder_24h",
+                          master=b.master.display_name or "Мастер",
+                          service=b.service.name,
+                          duration=f"{b.service.duration_min} {min_unit}",
+                          price=price_str,
+                          time=b.start_time.strftime("%H:%M")),
                         reply_markup=client_cancel_kb(b.id),
                     )
                     sent += 1
@@ -121,11 +127,13 @@ async def _send_reminder_2h():
             client_tg_id = await _find_client_tg_id(b)
             if client_tg_id:
                 try:
+                    lang = getattr(b.master, "language", "ru") or "ru"
                     await bot.send_message(
                         client_tg_id,
-                        f"⏰ Через 2 часа — ваша запись!\n\n"
-                        f"👤 {b.master.display_name or 'Мастер'} · {b.service.name}\n"
-                        f"🕐 Сегодня в {b.start_time.strftime('%H:%M')}",
+                        t(lang, "reminder_2h",
+                          master=b.master.display_name or "Мастер",
+                          service=b.service.name,
+                          time=b.start_time.strftime("%H:%M")),
                         reply_markup=client_cancel_kb(b.id),
                     )
                     sent += 1
