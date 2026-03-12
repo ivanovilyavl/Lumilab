@@ -217,6 +217,12 @@ export default function MastersTable({ initData }: Props) {
         </button>
       </div>
 
+      {(filter !== 'all' || search.trim()) && (
+        <div className="filter-hint">
+          Показано: <b>{filtered.length}</b> из <b>{masters.length}</b>
+        </div>
+      )}
+
       {consentedCount > 0 && (
         <button className="select-all-btn" onClick={selectAllConsented}>
           {selected.size === consentedCount ? 'Снять выделение' : `Выбрать всех с согласием (${consentedCount})`}
