@@ -756,3 +756,32 @@ body {
   color: var(--text-secondary);
   padding: 4px 0 2px;
 }
+
+/* ── Clickable stat cards ─────────────────────────────────────────────── */
+
+.stat-card--clickable {
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.stat-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card--active {
+  border: 2px solid var(--accent);
+  background: rgba(124, 106, 247, 0.08);
+}
+
+/* ── Filter reset button ──────────────────────────────────────────────── */
+
+.filter-reset-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}

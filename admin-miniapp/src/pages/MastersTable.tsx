@@ -6,7 +6,7 @@ interface Props {
   initData: string;
 }
 
-type SubFilter = 'all' | 'trial' | 'active' | 'inactive';
+type SubFilter = 'all' | 'trial' | 'active' | 'inactive' | 'onboarded';
 type ViewMode = 'cards' | 'table';
 
 const SUB_LABELS: Record<string, string> = {
@@ -60,6 +60,7 @@ export default function MastersTable({ initData }: Props) {
     if (filter === 'trial') list = list.filter((m) => m.subscription_status === 'trial');
     else if (filter === 'active') list = list.filter((m) => m.subscription_status === 'active');
     else if (filter === 'inactive') list = list.filter((m) => ['inactive', 'expired'].includes(m.subscription_status));
+    else if (filter === 'onboarded') list = list.filter((m) => m.is_onboarded);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -163,51 +164,47 @@ export default function MastersTable({ initData }: Props) {
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats — click to filter, click active card again to reset */}
       <div className="stats-row">
-        <div className="stat-card">
+        <div
+          className={`stat-card stat-card--clickable${filter === 'all' ? ' stat-card--active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
           <div className="stat-value">{stats.total}</div>
-          <div className="stat-label">Всего</div>
+          <div className="stat-label">Все</div>
         </div>
-        <div className="stat-card">
+        <div
+          className={`stat-card stat-card--clickable${filter === 'onboarded' ? ' stat-card--active' : ''}`}
+          onClick={() => setFilter(filter === 'onboarded' ? 'all' : 'onboarded')}
+        >
           <div className="stat-value">{stats.onboarded}</div>
           <div className="stat-label">Онбординг</div>
         </div>
-        <div className="stat-card">
+        <div
+          className={`stat-card stat-card--clickable${filter === 'trial' ? ' stat-card--active' : ''}`}
+          onClick={() => setFilter(filter === 'trial' ? 'all' : 'trial')}
+        >
           <div className="stat-value">{stats.trial}</div>
           <div className="stat-label">Триал</div>
         </div>
-        <div className="stat-card stat-card--accent">
+        <div
+          className={`stat-card stat-card--accent stat-card--clickable${filter === 'active' ? ' stat-card--active' : ''}`}
+          onClick={() => setFilter(filter === 'active' ? 'all' : 'active')}
+        >
           <div className="stat-value">{stats.paying}</div>
           <div className="stat-label">Платных</div>
         </div>
       </div>
 
-      {/* Search */}
-      <input
-        type="search"
-        className="admin-search"
-        placeholder="Поиск по имени или @username..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-
-      {/* Filter tabs + view toggle */}
+      {/* Search + view toggle */}
       <div className="filter-row">
-        <div className="filter-tabs">
-          {(['all', 'trial', 'active', 'inactive'] as SubFilter[]).map((t) => (
-            <button
-              key={t}
-              className={`filter-tab${filter === t ? ' active' : ''}`}
-              onClick={() => setFilter(t)}
-            >
-              {t === 'all' ? `Все (${masters.length})` :
-               t === 'trial' ? `Триал (${stats.trial})` :
-               t === 'active' ? `Платные (${stats.paying})` :
-               `Неакт. (${stats.inactive})`}
-            </button>
-          ))}
-        </div>
+        <input
+          type="search"
+          className="admin-search"
+          placeholder="Поиск по имени или @username..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <button
           className={`view-toggle${viewMode === 'table' ? ' active' : ''}`}
           onClick={() => setViewMode(viewMode === 'cards' ? 'table' : 'cards')}
@@ -220,6 +217,10 @@ export default function MastersTable({ initData }: Props) {
       {(filter !== 'all' || search.trim()) && (
         <div className="filter-hint">
           Показано: <b>{filtered.length}</b> из <b>{masters.length}</b>
+          {' '}
+          <button className="filter-reset-btn" onClick={() => { setFilter('all'); setSearch(''); }}>
+            сбросить
+          </button>
         </div>
       )}
 
