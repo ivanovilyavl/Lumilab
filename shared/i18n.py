@@ -25,7 +25,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "enter_service_name": (
             "Теперь добавим вашу первую услугу.\n\n"
             "Введите <b>название услуги</b>:\n"
-            "(например: Стрижка, Маникюр, Урок английского)"
+            "(например: {examples})"
         ),
         "service_name_error": "Название услуги — от 1 до 128 символов. Попробуйте ещё раз:",
         "enter_price": "Услуга: <b>{name}</b>\n\nУкажите <b>цену</b> или пропустите, если цена индивидуальная:",
@@ -105,7 +105,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "enter_service_name": (
             "Now let's add your first service.\n\n"
             "Enter the <b>service name</b>:\n"
-            "(e.g. Haircut, Manicure, English lesson)"
+            "(e.g. {examples})"
         ),
         "service_name_error": "Service name must be 1–128 characters. Please try again:",
         "enter_price": "Service: <b>{name}</b>\n\nEnter the <b>price</b> or skip if it varies:",
@@ -183,7 +183,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "enter_service_name": (
             "Ahora agreguemos tu primer servicio.\n\n"
             "Introduce el <b>nombre del servicio</b>:\n"
-            "(p.ej. Corte de pelo, Manicura, Clase de inglés)"
+            "(p.ej. {examples})"
         ),
         "service_name_error": "El nombre debe tener entre 1 y 128 caracteres. Inténtalo de nuevo:",
         "enter_price": "Servicio: <b>{name}</b>\n\nIntroduce el <b>precio</b> o sáltalo si varía:",
@@ -246,6 +246,34 @@ STRINGS: dict[str, dict[str, str]] = {
 
 SUPPORTED_LANGS = {"ru", "en", "es"}
 LANG_LABELS = {"ru": "🇷🇺 Русский", "en": "🇬🇧 English", "es": "🇪🇸 Español"}
+
+# Examples shown in "enter service name" step — chosen based on selected niche
+NICHE_SERVICE_EXAMPLES: dict[str, dict[str, str]] = {
+    "ru": {
+        "beauty":        "Стрижка, Маникюр, Окрашивание",
+        "tutor":         "Урок английского, Подготовка к ЕГЭ",
+        "trainer":       "Персональная тренировка, Йога, Растяжка",
+        "psychologist":  "Индивидуальная консультация, Психотерапия",
+        "photo":         "Фотосессия, Семейная съёмка, Репортаж",
+        "other":         "Консультация, Мастер-класс",
+    },
+    "en": {
+        "beauty":        "Haircut, Manicure, Hair coloring",
+        "tutor":         "English lesson, Exam preparation",
+        "trainer":       "Personal training, Yoga, Stretching",
+        "psychologist":  "Individual consultation, Therapy session",
+        "photo":         "Photo session, Family shoot, Event coverage",
+        "other":         "Consultation, Workshop",
+    },
+    "es": {
+        "beauty":        "Corte de pelo, Manicura, Coloración",
+        "tutor":         "Clase de inglés, Preparación para examen",
+        "trainer":       "Entrenamiento personal, Yoga, Estiramiento",
+        "psychologist":  "Consulta individual, Sesión de terapia",
+        "photo":         "Sesión de fotos, Reportaje familiar",
+        "other":         "Consulta, Taller",
+    },
+}
 
 CURRENCY_SYMBOLS: dict[str, str] = {"RUB": "₽", "USD": "$", "EUR": "€"}
 SUPPORTED_CURRENCIES = {"RUB", "USD", "EUR"}

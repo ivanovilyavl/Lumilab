@@ -13,7 +13,7 @@ from bot.keyboards.common import niche_kb, schedule_days_kb, slot_step_kb, main_
 from bot.states.onboarding import OnboardingStates
 from db.models import Master, Service, ScheduleTemplate, ScheduleOverride, Event, Referral
 from shared.config import settings
-from shared.i18n import t, LANG_LABELS, CURRENCY_LABELS, SUPPORTED_CURRENCIES
+from shared.i18n import t, LANG_LABELS, CURRENCY_LABELS, SUPPORTED_CURRENCIES, NICHE_SERVICE_EXAMPLES
 from shared.utils import generate_referral_code
 
 router = Router()
@@ -154,20 +154,19 @@ async def cmd_start(message: Message, state: FSMContext, db: AsyncSession, comma
 
 @router.callback_query(OnboardingStates.CONSENT, F.data.startswith("consent:"))
 async def process_consent(callback: CallbackQuery, state: FSMContext):
+    # Default to Russian and RUB — user can change via /language and /currency later
     await state.update_data(
         consent_given=True,
         consent_at=datetime.utcnow().isoformat(),
+        language="ru",
+        currency="RUB",
     )
-    await callback.message.edit_text(
-        "🌍 Выберите язык интерфейса и уведомлений:\n"
-        "Select interface language / Seleccione el idioma:",
-        reply_markup=language_kb(),
-    )
-    await state.set_state(OnboardingStates.LANGUAGE)
+    await callback.message.edit_text(t("ru", "enter_name"))
+    await state.set_state(OnboardingStates.NAME)
     await callback.answer()
 
 
-# ── Шаг 0b: Язык ────────────────────────────────────────────────
+# ── Шаг 0b: Язык (только через /language после онбординга) ──────
 
 @router.callback_query(OnboardingStates.LANGUAGE, F.data.startswith("setlang:"))
 async def process_language(callback: CallbackQuery, state: FSMContext):
@@ -181,7 +180,7 @@ async def process_language(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# ── Шаг 0c: Валюта ───────────────────────────────────────────────
+# ── Шаг 0c: Валюта (только через /currency после онбординга) ─────
 
 @router.callback_query(OnboardingStates.CURRENCY, F.data.startswith("setcurrency:"))
 async def process_currency(callback: CallbackQuery, state: FSMContext):
@@ -222,7 +221,9 @@ async def process_niche(callback: CallbackQuery, state: FSMContext):
     await state.update_data(niche=niche)
     data = await state.get_data()
     lang = data.get("language", "ru")
-    await callback.message.edit_text(t(lang, "enter_service_name"))
+    lang_examples = NICHE_SERVICE_EXAMPLES.get(lang, NICHE_SERVICE_EXAMPLES["ru"])
+    examples = lang_examples.get(niche, lang_examples["other"])
+    await callback.message.edit_text(t(lang, "enter_service_name", examples=examples))
     await state.set_state(OnboardingStates.SERVICE_NAME)
     await callback.answer()
 
@@ -608,5 +609,34 @@ async def cmd_reset(message: Message, state: FSMContext, db: AsyncSession, maste
 async def onboarding_fallback(message: Message, state: FSMContext):
     await message.answer(
         "Вы ещё не завершили настройку профиля.\n"
-        "Пожалуйста, ответьте на текущий вопрос или введите /start чтобы начать заново."
+        "Пожалуйста, ответьте на текущий вопрос или начните заново:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🔄 Начать заново", callback_data="restart_onboarding"),
+        ]]),
     )
+
+
+@router.callback_query(F.data == "restart_onboarding")
+async def cb_restart_onboarding(callback: CallbackQuery, state: FSMContext, db: AsyncSession, master: Master | None):
+    await state.clear()
+    if master:
+        await db.execute(
+            ScheduleTemplate.__table__.delete().where(ScheduleTemplate.master_id == master.id)
+        )
+        await db.execute(
+            ScheduleOverride.__table__.delete().where(ScheduleOverride.master_id == master.id)
+        )
+        await db.execute(
+            Service.__table__.delete().where(Service.master_id == master.id)
+        )
+        master.is_onboarded = False
+        master.display_name = None
+        master.niche = None
+        master.bio = None
+        await db.commit()
+        await state.update_data(existing_master_id=master.id)
+        await callback.message.edit_text(RESET_CONSENT_TEXT, reply_markup=consent_kb("reset"))
+    else:
+        await callback.message.edit_text(WELCOME_TEXT, reply_markup=consent_kb("new"))
+    await state.set_state(OnboardingStates.CONSENT)
+    await callback.answer()
