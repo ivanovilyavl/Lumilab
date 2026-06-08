@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 
 from shared.config import settings
 
@@ -21,7 +22,9 @@ app.conf.beat_schedule = {
     },
     "check-trial-expiry": {
         "task": "worker.tasks.subscription.check_trial_expiry",
-        "schedule": 86400.0,  # daily
+        # Daily at 09:00 MSK. crontab is wall-clock based so beat restarts
+        # cannot indefinitely postpone the run (unlike a raw interval).
+        "schedule": crontab(hour=9, minute=0),
     },
     "mark-subscription-expired": {
         "task": "worker.tasks.subscription.mark_subscription_expired",
@@ -37,7 +40,11 @@ app.conf.beat_schedule = {
     },
     "weekly-digest": {
         "task": "worker.tasks.analytics.send_weekly_digest",
-        "schedule": 604800.0,  # weekly
+        # Every Monday at 10:00 MSK. A raw 7-day interval never fired in
+        # practice: beat's run-state isn't persisted across restarts, so any
+        # redeploy within the week reset the countdown. crontab is wall-clock
+        # based and always fires at the next matching time.
+        "schedule": crontab(hour=10, minute=0, day_of_week=1),
     },
     "auto-cancel-pending": {
         "task": "worker.tasks.reminders.auto_cancel_pending",
@@ -45,6 +52,7 @@ app.conf.beat_schedule = {
     },
     "cleanup-old-messages": {
         "task": "worker.tasks.reminders.cleanup_old_messages",
-        "schedule": 86400.0,  # daily
+        # Daily at 04:00 MSK (wall-clock based, restart-safe).
+        "schedule": crontab(hour=4, minute=0),
     },
 }
